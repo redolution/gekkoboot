@@ -3,8 +3,14 @@
 #include <sdcard/gcsd.h>
 #include <malloc.h>
 #include <unistd.h>
-#include <ogc/lwp_watchdog.h>
 #include <fcntl.h>
+#include <ogc/aram.h>
+#include <ogc/consol.h>
+#include <ogc/exi.h>
+#include <ogc/system.h>
+#include <ogc/time.h>
+#include <ogc/usbgecko.h>
+#include <ogc/video.h>
 #include "sidestep.h"
 #include "ffshim.h"
 #include "fatfs/ff.h"

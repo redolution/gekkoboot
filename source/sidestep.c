@@ -10,8 +10,6 @@
 #include <malloc.h>
 #include <ogc/aram.h>
 #include <ogc/cache.h>
-#include <ogc/gx.h>
-#include <ogc/lwp_threads.h>
 #include <ogc/system.h>
 
 #include "sidestep.h"
@@ -156,7 +154,6 @@ void ARAMRun(u32 entrypoint, u32 dst, u32 src, u32 len)
 	_len = len;
 	
 	/*** Shutdown libOGC ***/
-	GX_AbortFrame();
 	u32 bi2Addr = *(volatile u32*)0x800000F4;
 	u32 osctxphys = *(volatile u32*)0x800000C0;
 	u32 osctxvirt = *(volatile u32*)0x800000D4;
@@ -164,8 +161,7 @@ void ARAMRun(u32 entrypoint, u32 dst, u32 src, u32 len)
 	*(volatile u32*)0x800000F4 = bi2Addr;
 	*(volatile u32*)0x800000C0 = osctxphys;
 	*(volatile u32*)0x800000D4 = osctxvirt;
-	/*** Shutdown all threads and exit to this method ***/
-	__lwp_thread_stopmultitasking((void(*)())ARAMRunStub());
+	ARAMRunStub();
 }
 
 /****************************************************************************

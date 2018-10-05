@@ -21,23 +21,22 @@ MACHDEP =  -DGEKKO -mcpu=750 \
 #---------------------------------------------------------------------------------
 TARGET		:=	$(notdir $(CURDIR))
 BUILD		:=	build
-SOURCES		:=	source/ source/fatfs/
-DATA		:=	data  
-INCLUDES	:=	-nostdlibinc -isystem $(DEVKITPPC)/powerpc-eabi/include
+SOURCES		:=	source/ source/fatfs/ source/ogc/
+DATA		:=	data
+INCLUDE		:=	-nostdlibinc -isystem $(DEVKITPPC)/powerpc-eabi/include -I$(PWD)/include
 
 #---------------------------------------------------------------------------------
 # options for code generation
 #---------------------------------------------------------------------------------
 
 CFLAGS	= -g -O2 -Wall $(MACHDEP) $(INCLUDE)
-CXXFLAGS	=	$(CFLAGS)
-
+ASFLAGS	= $(INCLUDE)
 LDFLAGS	=	-g $(MACHDEP) -Wl,-Map,$(notdir $@).map -T$(PWD)/ipl.ld
 
 #---------------------------------------------------------------------------------
 # any extra libraries we wish to link with the project
 #---------------------------------------------------------------------------------
-LIBS	:=	-logc
+LIBS	:=
 
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing
@@ -74,8 +73,8 @@ BINFILES	:=	$(foreach dir,$(DATA),$(notdir $(wildcard $(dir)/*.*)))
 # use CXX for linking C++ projects, CC for standard C
 #---------------------------------------------------------------------------------
 ifeq ($(strip $(CPPFILES)),)
-	export LD	:=	$(CC) -Wl,--gc-sections -nostartfiles \
-		$(DEVKITPPC)/lib/gcc/powerpc-eabi/*/crtend.o \
+	export LD	:=	$(CC) -Wl,--gc-sections -nostartfiles
+		#$(DEVKITPPC)/lib/gcc/powerpc-eabi/*/crtend.o \
 		$(DEVKITPPC)/lib/gcc/powerpc-eabi/*/ecrtn.o \
 		$(DEVKITPPC)/lib/gcc/powerpc-eabi/*/ecrti.o \
 		$(DEVKITPPC)/lib/gcc/powerpc-eabi/*/crtbegin.o \
@@ -91,10 +90,7 @@ export OFILES	:=	$(addsuffix .o,$(BINFILES)) \
 #---------------------------------------------------------------------------------
 # build a list of include paths
 #---------------------------------------------------------------------------------
-export INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
-					$(foreach dir,$(LIBDIRS),-I$(dir)/include) \
-					-I$(CURDIR)/$(BUILD) \
-					-I$(LIBOGC_INC)
+export INCLUDE
 
 #---------------------------------------------------------------------------------
 # build a list of library paths

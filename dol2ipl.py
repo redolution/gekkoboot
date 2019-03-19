@@ -78,7 +78,7 @@ def flatten_dol(data):
 
 def main():
     if len(sys.argv) != 4:
-        print(f"Usage: {sys.argv[0]} <original IPL> <executable> <output>")
+        print("Usage: {} <original IPL> <executable> <output>".format(sys.argv[0]))
 
     with open(sys.argv[1], "rb") as f:
         ipl = bytearray(f.read())
@@ -99,9 +99,9 @@ def main():
         load &= 0x017FFFFF
         size = len(img)
 
-        print(f"Entry point:   0x{entry:0{8}X}")
-        print(f"Load address:  0x{load:0{8}X}")
-        print(f"Image size:    {size} bytes ({size // 1024}K)")
+        print("Entry point:   0x{:08X}".format(entry))
+        print("Load address:  0x{:08X}".format(load))
+        print("Image size:    {} bytes ({}K)".format(size, size // 1024))
     elif sys.argv[2].endswith(".elf"):
         pass
     else:
@@ -119,7 +119,7 @@ def main():
         # Qoob specific
         npages = math.ceil((len(header) + len(bs1) + size) / 0x10000)
         header[0xFD] = npages
-        print(f"Qoob blocks:   {npages}")
+        print("Qoob blocks:   {}".format(npages))
 
         # Put it all together
         out = header + scramble(bs1 + img)

@@ -115,7 +115,7 @@ clean:
 	@echo clean ...
 	@rm -fr $(BUILD) $(OUTPUT).{elf,dol} $(OUTPUT).{gcb,vgc} \
 		$(OUTPUT)_xz.{dol,elf,qbsx} $(OUTPUT_SX).{dol,elf} \
-		$(OUTPUT)_xeno.{bin,elf}
+		$(OUTPUT)_xeno.{bin,elf} $(OUTPUT){,_xz}.gci
 
 #---------------------------------------------------------------------------------
 run: $(BUILD)
@@ -130,13 +130,17 @@ DEPENDS	:=	$(OFILES:.o=.d)
 #---------------------------------------------------------------------------------
 # main targets
 #---------------------------------------------------------------------------------
-all: $(OUTPUT).gcb $(OUTPUT_SX).dol $(OUTPUT).vgc $(OUTPUT)_xeno.bin
+all: $(OUTPUT).gcb $(OUTPUT).vgc $(OUTPUT).gci $(OUTPUT)_xz.gci
 
 $(OUTPUT).elf: $(OFILES)
 
 %.gcb: %.dol
 	@echo pack IPL ... $(notdir $@)
 	@cd $(PWD); ./dol2ipl.py ipl.rom $< $@
+
+%.gci: %.dol
+	@echo dol2gci ... $(notdir $@)
+	@dol2gci $< $@ boot.dol
 
 $(OUTPUT)_xz.dol: $(OUTPUT).dol
 	@echo compress ... $(notdir $@)

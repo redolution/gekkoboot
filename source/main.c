@@ -31,7 +31,7 @@ struct shortcut {
   {PAD_BUTTON_LEFT,  "/left.dol" },
   {PAD_BUTTON_RIGHT, "/right.dol"},
   {PAD_BUTTON_UP,    "/up.dol"   },
-  {PAD_BUTTON_DOWN,  "/down.dol" }
+  // Down is reserved for debuging (delaying exit).
   // NOTE: Shouldn't use L, R or Joysticks as analog inputs are calibrated on boot.
 };
 int num_shortcuts = sizeof(shortcuts)/sizeof(shortcuts[0]);
@@ -257,6 +257,19 @@ int main()
     if (load_fat("sd2", &__io_gcsd2)) goto load;
 
 load:
+    // Wait to exit while the d-pad down direction is held.
+    while (all_buttons_held & PAD_BUTTON_DOWN)
+    {
+        VIDEO_WaitVSync();
+        PAD_ScanPads();
+        all_buttons_held = (
+            PAD_ButtonsHeld(PAD_CHAN0) |
+            PAD_ButtonsHeld(PAD_CHAN1) |
+            PAD_ButtonsHeld(PAD_CHAN2) |
+            PAD_ButtonsHeld(PAD_CHAN3)
+        );
+    }
+
     if (dol)
     {
         memcpy((void *) STUB_ADDR, stub, stub_size);

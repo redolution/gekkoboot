@@ -1,3 +1,4 @@
+#include "fatfs/ff.h"
 #include "fatfs/diskio.h"
 #include "ffshim.h"
 
@@ -37,7 +38,7 @@ noinit:
         return STA_NOINIT;
 }
 
-DRESULT disk_read(BYTE pdrv, BYTE *buff, DWORD sector, UINT count)
+DRESULT disk_read(BYTE pdrv, BYTE *buff, LBA_t sector, UINT count)
 {
     (void) pdrv;
 

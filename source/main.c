@@ -1,13 +1,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sdcard/gcsd.h>
+#include <string.h>
 #include <malloc.h>
 #include <unistd.h>
 #include <ogc/lwp_watchdog.h>
 #include <fcntl.h>
-#include "sidestep.h"
 #include "ffshim.h"
 #include "fatfs/ff.h"
+
+#include "stub.h"
+#define STUB_ADDR  0x80001000
+#define STUB_STACK 0x80003000
 
 u8 *dol = NULL;
 
@@ -21,12 +25,6 @@ void dol_alloc(int size)
     if (size <= 0)
     {
         kprintf("Empty DOL\n");
-        return;
-    }
-
-    if (size >= (AR_GetSize() - (64 * 1024)))
-    {
-        kprintf("DOL too big\n");
         return;
     }
 
@@ -223,7 +221,13 @@ int main()
 load:
     if (dol)
     {
-        DOLtoARAM(dol, 0, NULL);
+        memcpy((void *) STUB_ADDR, stub, stub_size);
+        DCStoreRange((void *) STUB_ADDR, stub_size);
+
+        SYS_ResetSystem(SYS_SHUTDOWN, 0, FALSE);
+        SYS_SwitchFiber((intptr_t) dol, 0,
+                        (intptr_t) NULL, 0,
+                        STUB_ADDR, STUB_STACK);
     }
 
     // If we reach here, all attempts to load a DOL failed

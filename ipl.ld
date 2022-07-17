@@ -93,7 +93,11 @@ SECTIONS
 
 	.rodata   : { *(.rodata) *(.rodata.*) *(.gnu.linkonce.r.*) } :data
 	.rodata1   : { *(.rodata1) }
-	.sdata2   : { *(.sdata2) *(.sdata2.*) *(.gnu.linkonce.s2.*) }
+	.sdata2   : { 
+		PROVIDE(_SDA2_BASE_ = . );
+		*(.sdata2) *(.sdata2.*)
+		*(.gnu.linkonce.s2.*)
+	}
 	.sbss2   : { *(.sbss2) *(.sbss2.*) *(.gnu.linkonce.sb2.*) }
   /* Adjust the address for the data segment.  We want to adjust up to
      the same address within the page on the next page up.  */
@@ -174,6 +178,7 @@ SECTIONS
 
 	.sdata     :
 	{
+		PROVIDE(_SDA_BASE_ = . );
 		*(.sdata)
 		*(.sdata.*)
 		*(.gnu.linkonce.s.*)
@@ -261,7 +266,7 @@ __stack_addr = (__bss_start + SIZEOF(.bss) + 0x20000 + 7) & (-8);
 __stack_end = (__bss_start + SIZEOF(.bss));
 __intrstack_addr = (__stack_addr + 0x4000);
 __intrstack_end = (__stack_addr);
-__Arena1Lo = (0x80000000);
-__Arena1Hi = (0x812FEFF0);
+__Arena1Lo = (0x80003100);
+__Arena1Hi = (0x81300000);
 
-__gxregs = (__Arena1Hi + 31) & (-32);
+__gxregs = (__intrstack_addr + 31) & (-32);

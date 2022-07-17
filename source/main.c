@@ -193,8 +193,6 @@ int main()
 
     kprintf("\n\nIPLboot\n");
 
-    *(volatile unsigned long *) 0xCC00643C = 0x00000000; // Enable 27MHz EXI
-
     // Disable Qoob
     u32 val = 6 << 24;
     u32 addr = 0xC0000000;

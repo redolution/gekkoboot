@@ -175,19 +175,19 @@ end:
     return res;
 }
 
+extern u8 __xfb[];
+
 int main()
 {
     VIDEO_Init();
     GXRModeObj *rmode = VIDEO_GetPreferredMode(NULL);
-    void *xfb = MEM_K0_TO_K1(SYS_AllocateFramebuffer(rmode));
     VIDEO_Configure(rmode);
-    VIDEO_SetNextFramebuffer(xfb);
+    VIDEO_SetNextFramebuffer(__xfb);
     VIDEO_SetBlack(FALSE);
     VIDEO_Flush();
     VIDEO_WaitVSync();
-    if (rmode->viTVMode & VI_NON_INTERLACE)
-        VIDEO_WaitVSync();
-    console_init(xfb, 20, 20, rmode->fbWidth, rmode->xfbHeight, rmode->fbWidth * 2);
+    VIDEO_WaitVSync();
+    CON_Init(__xfb, 0, 0, rmode->fbWidth, rmode->xfbHeight, rmode->fbWidth * VI_DISPLAY_PIX_SZ);
 
     kprintf("\n\nIPLboot\n");
 

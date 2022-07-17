@@ -270,3 +270,4 @@ __Arena1Lo = (0x80003100);
 __Arena1Hi = (0x81300000);
 
 __gxregs = (__intrstack_addr + 31) & (-32);
+__xfb = (__gxregs + 0x800) + (0xC0000000 - 0x80000000);

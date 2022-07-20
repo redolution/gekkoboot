@@ -181,9 +181,6 @@ extern u8 __xfb[];
 
 int main()
 {
-    // If this is set to 1 force the
-    u8 forceIPL = 0;
-
     VIDEO_Init();
     PAD_Init();
     GXRModeObj *rmode = VIDEO_GetPreferredMode(NULL);
@@ -242,7 +239,7 @@ int main()
     if (load_fat("sd2", &__io_gcsd2)) goto load;
 
 load:
-    if (dol && !forceIPL)
+    if (dol)
     {
         memcpy((void *) STUB_ADDR, stub, stub_size);
         DCStoreRange((void *) STUB_ADDR, stub_size);

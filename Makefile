@@ -108,9 +108,8 @@ $(BUILD):
 #---------------------------------------------------------------------------------
 clean:
 	@echo clean ...
-	@rm -fr $(BUILD) $(OUTPUT).{elf,dol} $(OUTPUT).{gcb,vgc} \
-		$(OUTPUT)_xz.{dol,elf,qbsx} $(OUTPUT_SX).{dol,elf} \
-		$(OUTPUT)_xeno.{bin,elf} $(OUTPUT){,_xz}.gci
+	@rm -rf $(BUILD)
+	@rm -f $(OUTPUT)* $(OUTPUT_SX)*
 
 #---------------------------------------------------------------------------------
 run: $(BUILD)

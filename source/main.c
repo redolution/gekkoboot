@@ -15,7 +15,26 @@
 #define STUB_STACK 0x80003000
 
 u8 *dol = NULL;
-char path[32] = "/ipl.dol";
+char *path = "/ipl.dol";
+u16 all_buttons_held;
+
+struct shortcut {
+  u16 pad_buttons;
+  char *path;
+} shortcuts[] = {
+  {PAD_BUTTON_A,     "/a.dol"    },
+  {PAD_BUTTON_B,     "/b.dol"    },
+  {PAD_BUTTON_X,     "/x.dol"    },
+  {PAD_BUTTON_Y,     "/y.dol"    },
+  {PAD_TRIGGER_Z,    "/z.dol"    },
+  {PAD_BUTTON_START, "/start.dol"},
+  {PAD_BUTTON_LEFT,  "/left.dol" },
+  {PAD_BUTTON_RIGHT, "/right.dol"},
+  {PAD_BUTTON_UP,    "/up.dol"   },
+  {PAD_BUTTON_DOWN,  "/down.dol" }
+  // NOTE: Shouldn't use L, R or Joysticks as analog inputs are calibrated on boot.
+};
+int num_shortcuts = sizeof(shortcuts)/sizeof(shortcuts[0]);
 
 void dol_alloc(int size)
 {
@@ -213,19 +232,18 @@ int main()
 
     PAD_ScanPads();
 
-    if (PAD_ButtonsDown(0) & PAD_BUTTON_B)
-    {
-        strcpy(path, "/b.dol");
-    }
+    all_buttons_held = (
+        PAD_ButtonsHeld(PAD_CHAN0) |
+        PAD_ButtonsHeld(PAD_CHAN1) |
+        PAD_ButtonsHeld(PAD_CHAN2) |
+        PAD_ButtonsHeld(PAD_CHAN3)
+    );
 
-    if (PAD_ButtonsDown(0) & PAD_BUTTON_Y)
-    {
-        strcpy(path, "/y.dol");
-    }
-
-    if (PAD_ButtonsDown(0) & PAD_BUTTON_X)
-    {
-        strcpy(path, "/x.dol");
+    for (int i = 0; i < num_shortcuts; i++) {
+      if (all_buttons_held & shortcuts[i].pad_buttons) {
+        path = shortcuts[i].path;
+        break;
+      }
     }
 
     if (load_usb('B')) goto load;

@@ -98,7 +98,7 @@ export INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
 export LIBPATHS	:=	-L$(LIBOGC_LIB) $(foreach dir,$(LIBDIRS),-L$(dir)/lib)
 
 export OUTPUT	:=	$(CURDIR)/$(TARGET)
-.PHONY: $(BUILD) clean
+.PHONY: $(BUILD) clean run
 
 #---------------------------------------------------------------------------------
 $(BUILD):
@@ -123,6 +123,7 @@ DEPENDS	:=	$(OFILES:.o=.d)
 #---------------------------------------------------------------------------------
 # main targets
 #---------------------------------------------------------------------------------
+.PHONY: all
 all: $(OUTPUT).gcb $(OUTPUT).vgc $(OUTPUT).gci $(OUTPUT)_xz.gci
 
 $(OUTPUT).dol: $(OUTPUT).elf

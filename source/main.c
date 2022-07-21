@@ -16,7 +16,6 @@
 
 u8 *dol = NULL;
 char *path = "/ipl.dol";
-u16 all_buttons_held;
 
 struct shortcut {
   u16 pad_buttons;
@@ -232,7 +231,7 @@ int main()
 
     PAD_ScanPads();
 
-    all_buttons_held = (
+    u16 all_buttons_held = (
         PAD_ButtonsHeld(PAD_CHAN0) |
         PAD_ButtonsHeld(PAD_CHAN1) |
         PAD_ButtonsHeld(PAD_CHAN2) |

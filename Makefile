@@ -97,12 +97,12 @@ export INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
 #---------------------------------------------------------------------------------
 export LIBPATHS	:=	-L$(LIBOGC_LIB) $(foreach dir,$(LIBDIRS),-L$(dir)/lib)
 
-.PHONY: all dol gci qoob qoobsx viper compressed_dol compressed_gci $(BUILD) clean run
+.PHONY: all dol gci qoob qoobsx viper dol_compressed gci_compressed $(BUILD) clean run
 
 export BUILD_MAKE := @mkdir -p $(BUILD) && $(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
 
 #---------------------------------------------------------------------------------
-all: dol gci qoob viper compressed_dol compressed_gci
+all: dol gci qoob viper dol_compressed gci_compressed
 dol:
 	$(BUILD_MAKE) $(OUTPUT).dol
 gci:
@@ -113,9 +113,9 @@ qoobsx:
 	$(BUILD_MAKE) $(OUTPUT_SX).elf
 viper:
 	$(BUILD_MAKE) $(OUTPUT).vgc
-compressed_dol:
+dol_compressed:
 	$(BUILD_MAKE) $(OUTPUT)_xz.dol
-compressed_gci:
+gci_compressed:
 	$(BUILD_MAKE) $(OUTPUT)_xz.gci
 
 #---------------------------------------------------------------------------------

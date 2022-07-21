@@ -29,10 +29,10 @@ INCLUDES	:=
 # options for code generation
 #---------------------------------------------------------------------------------
 
-CFLAGS	= -g -O2 -Wall $(MACHDEP) $(INCLUDE)
-CXXFLAGS	=	$(CFLAGS)
+CFLAGS		= -g -O2 -Wall $(MACHDEP) $(INCLUDE)
+CXXFLAGS	= $(CFLAGS)
 
-LDFLAGS	=	-g $(MACHDEP) -Wl,-Map,$(notdir $@).map -T$(PWD)/ipl.ld
+LDFLAGS		= -g $(MACHDEP) -Wl,-Map,$(notdir $@).map -T$(PWD)/ipl.ld
 
 #---------------------------------------------------------------------------------
 # any extra libraries we wish to link with the project
@@ -52,8 +52,8 @@ LIBDIRS	:=
 ifneq ($(BUILD),$(notdir $(CURDIR)))
 #---------------------------------------------------------------------------------
 
-export OUTPUT	:=	$(CURDIR)/$(TARGET)
-export OUTPUT_SX := $(CURDIR)/qoob_sx_$(TARGET)_upgrade
+export OUTPUT		:=	$(CURDIR)/$(TARGET)
+export OUTPUT_SX	:=	$(CURDIR)/qoob_sx_$(TARGET)_upgrade
 
 export VPATH	:=	$(foreach dir,$(SOURCES),$(CURDIR)/$(dir)) \
 			$(foreach dir,$(DATA),$(CURDIR)/$(dir))
@@ -156,7 +156,7 @@ $(OFILES_SOURCES) : $(HFILES)
 #---------------------------------------------------------------------------------
 %.gci: %.dol
 	@echo converting DOL to GCI ... $(notdir $@)
-	@dol2gci $< $@ boot.dol #TODO: should not use boot.dol save name?
+	@dol2gci $< $@ boot.dol
 
 #---------------------------------------------------------------------------------
 # Qoob
@@ -203,7 +203,7 @@ $(OUTPUT)_xz.dol: $(OUTPUT).dol
 
 $(OUTPUT)_xz.elf: $(OUTPUT)_xz.dol
 	@echo converting compressed DOL to ELF ... $(notdir $@)
-	@doltool -e $< #TODO: Where does this tool come from?
+	@doltool -e $<
 
 -include $(DEPENDS)
 

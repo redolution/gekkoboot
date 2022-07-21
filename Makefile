@@ -97,17 +97,17 @@ export INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
 #---------------------------------------------------------------------------------
 export LIBPATHS	:=	-L$(LIBOGC_LIB) $(foreach dir,$(LIBDIRS),-L$(dir)/lib)
 
-.PHONY: all dol gci qoob qoobsx viper dol_compressed gci_compressed $(BUILD) clean run
+.PHONY: all dol gci qoobpro qoobsx viper dol_compressed gci_compressed $(BUILD) clean run
 
 export BUILD_MAKE := @mkdir -p $(BUILD) && $(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
 
 #---------------------------------------------------------------------------------
-all: dol gci qoob viper dol_compressed gci_compressed
+all: dol gci qoobpro viper dol_compressed gci_compressed
 dol:
 	$(BUILD_MAKE) $(OUTPUT).dol
 gci:
 	$(BUILD_MAKE) $(OUTPUT).gci
-qoob:
+qoobpro:
 	$(BUILD_MAKE) $(OUTPUT).gcb
 qoobsx:
 	$(BUILD_MAKE) $(OUTPUT_SX).elf
@@ -155,10 +155,10 @@ $(OFILES_SOURCES) : $(HFILES)
 	@dol2gci $< $@ boot.dol
 
 #---------------------------------------------------------------------------------
-# Qoob
+# Qoob Pro
 #---------------------------------------------------------------------------------
 $(OUTPUT).gcb: $(OUTPUT).dol
-	@echo pack Qoob IPL ... $(notdir $@)
+	@echo pack Qoob Pro IPL ... $(notdir $@)
 	@cd $(PWD); ./dol2ipl.py ipl.rom $< $@
 
 #---------------------------------------------------------------------------------

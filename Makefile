@@ -153,25 +153,25 @@ $(OFILES_SOURCES) : $(HFILES)
 # GCI
 #---------------------------------------------------------------------------------
 %.gci: %.dol
-	@echo converting DOL to GCI ... $(notdir $@)
+	@echo convert DOL to GCI ... $(notdir $@)
 	@dol2gci $< $@ boot.dol
 
 #---------------------------------------------------------------------------------
 # Qoob
 #---------------------------------------------------------------------------------
 $(OUTPUT).gcb: $(OUTPUT).dol
-	@echo packing Qoob IPL ... $(notdir $@)
+	@echo pack Qoob IPL ... $(notdir $@)
 	@cd $(PWD); ./dol2ipl.py ipl.rom $< $@
 
 #---------------------------------------------------------------------------------
 # Qoob SX
 #---------------------------------------------------------------------------------
 $(OUTPUT)_xz.qbsx: $(OUTPUT)_xz.elf
-	@echo packing Qoob SX IPL ... $(notdir $@)
+	@echo pack Qoob SX IPL ... $(notdir $@)
 	@cd $(PWD); ./dol2ipl.py /dev/null $< $@
 
 $(OUTPUT_SX).elf: $(OUTPUT)_xz.qbsx
-	@echo splicing Qoob SX bios ... $(notdir $@)
+	@echo splice Qoob SX bios ... $(notdir $@)
 	@cd $(PWD); cp -f qoob_sx_13c_upgrade.elf $@
 	@cd $(PWD); dd if=$< of=$@ obs=4 seek=1851 conv=notrunc
 	@cd $(PWD); printf 'QOOB SX iplboot install\0' \
@@ -181,7 +181,7 @@ $(OUTPUT_SX).elf: $(OUTPUT)_xz.qbsx
 # Viper
 #---------------------------------------------------------------------------------
 $(OUTPUT).vgc: $(OUTPUT).dol
-	@echo packing Viper IPL... $(notdir $@)
+	@echo pack Viper IPL... $(notdir $@)
 	@cd $(PWD); ./dol2ipl.py /dev/null $< $@
 
 #---------------------------------------------------------------------------------
@@ -196,11 +196,11 @@ $(OUTPUT)_xeno.elf: $(OFILES)
 # Compression
 #---------------------------------------------------------------------------------
 $(OUTPUT)_xz.dol: $(OUTPUT).dol
-	@echo compressing DOL ... $(notdir $@)
+	@echo compress DOL ... $(notdir $@)
 	@dolxz $< $@ -cube
 
 $(OUTPUT)_xz.elf: $(OUTPUT)_xz.dol
-	@echo converting compressed DOL to ELF ... $(notdir $@)
+	@echo convert compressed DOL to ELF ... $(notdir $@)
 	@doltool -e $<
 
 -include $(DEPENDS)

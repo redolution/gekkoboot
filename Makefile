@@ -52,8 +52,8 @@ LIBDIRS	:=
 ifneq ($(BUILD),$(notdir $(CURDIR)))
 #---------------------------------------------------------------------------------
 
-export OUTPUT		:=	$(CURDIR)/$(TARGET)
-export OUTPUT_SX	:=	$(CURDIR)/qoob_sx_$(TARGET)_upgrade
+export OUTPUT		:=	$(CURDIR)/$(BUILD)/$(TARGET)
+export OUTPUT_SX	:=	$(CURDIR)/$(BUILD)/qoob_sx_$(TARGET)_upgrade
 
 export VPATH	:=	$(foreach dir,$(SOURCES),$(CURDIR)/$(dir)) \
 			$(foreach dir,$(DATA),$(CURDIR)/$(dir))
@@ -127,7 +127,6 @@ $(BUILD): all
 clean:
 	@echo clean ...
 	@rm -rf $(BUILD)
-	@rm -f $(OUTPUT)* $(OUTPUT_SX)*
 
 #---------------------------------------------------------------------------------
 run: $(BUILD)

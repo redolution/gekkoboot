@@ -97,7 +97,7 @@ export INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
 #---------------------------------------------------------------------------------
 export LIBPATHS	:=	-L$(LIBOGC_LIB) $(foreach dir,$(LIBDIRS),-L$(dir)/lib)
 
-.PHONY: all dol gci qoob qoobsx viper xeno compressed_dol compressed_gci $(BUILD) clean run
+.PHONY: all dol gci qoob qoobsx viper compressed_dol compressed_gci $(BUILD) clean run
 
 export BUILD_MAKE := @mkdir -p $(BUILD) && $(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
 
@@ -113,8 +113,6 @@ qoobsx:
 	$(BUILD_MAKE) $(OUTPUT_SX).elf
 viper:
 	$(BUILD_MAKE) $(OUTPUT).vgc
-xeno:
-	$(BUILD_MAKE) $(OUTPUT)_xeno.dol
 compressed_dol:
 	$(BUILD_MAKE) $(OUTPUT)_xz.dol
 compressed_gci:
@@ -183,14 +181,6 @@ $(OUTPUT_SX).elf: $(OUTPUT)_xz.qbsx
 $(OUTPUT).vgc: $(OUTPUT).dol
 	@echo pack Viper IPL... $(notdir $@)
 	@cd $(PWD); ./dol2ipl.py /dev/null $< $@
-
-#---------------------------------------------------------------------------------
-# Xeno
-#---------------------------------------------------------------------------------
-$(OUTPUT)_xeno.dol: $(OUTPUT)_xeno.elf
-$(OUTPUT)_xeno.elf: $(OFILES)
-	@echo linking Xeno ... $(notdir $@)
-	@$(LD)  $^ $(LDFLAGS) -Wl,--section-start,.init=0x81700000 $(LIBPATHS) $(LIBS) -o $@
 
 #---------------------------------------------------------------------------------
 # Compression

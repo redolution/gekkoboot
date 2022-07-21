@@ -98,12 +98,31 @@ export INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
 export LIBPATHS	:=	-L$(LIBOGC_LIB) $(foreach dir,$(LIBDIRS),-L$(dir)/lib)
 
 export OUTPUT	:=	$(CURDIR)/$(TARGET)
-.PHONY: $(BUILD) clean run
+.PHONY: all dol gci qoob qoobsx viper xeno compressed_dol compressed_gci $(BUILD) clean run
+
+export BUILD_MAKE := @mkdir -p $(BUILD) && $(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
 
 #---------------------------------------------------------------------------------
-$(BUILD):
-	@[ -d $@ ] || mkdir -p $@
-	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
+all: dol gci qoob viper compressed_dol compressed_gci
+dol:
+	$(BUILD_MAKE) $(OUTPUT).dol
+gci:
+	$(BUILD_MAKE) $(OUTPUT).gci
+qoob:
+	$(BUILD_MAKE) $(OUTPUT).gcb
+qoobsx:
+	$(BUILD_MAKE) $(OUTPUT_SX).elf
+viper:
+	$(BUILD_MAKE) $(OUTPUT).vgc
+xeno:
+	$(BUILD_MAKE) $(OUTPUT)_xeno.dol
+compressed_dol:
+	$(BUILD_MAKE) $(OUTPUT)_xz.dol
+compressed_gci:
+	$(BUILD_MAKE) $(OUTPUT)_xz.gci
+
+#---------------------------------------------------------------------------------
+$(BUILD): all
 
 #---------------------------------------------------------------------------------
 clean:
@@ -123,52 +142,68 @@ DEPENDS	:=	$(OFILES:.o=.d)
 #---------------------------------------------------------------------------------
 # main targets
 #---------------------------------------------------------------------------------
-.PHONY: all
-all: $(OUTPUT).gcb $(OUTPUT).vgc $(OUTPUT).gci $(OUTPUT)_xz.gci
 
+#---------------------------------------------------------------------------------
+# Base DOL (PicoBoot)
+#---------------------------------------------------------------------------------
 $(OUTPUT).dol: $(OUTPUT).elf
 $(OUTPUT).elf: $(OFILES)
 
 $(OFILES_SOURCES) : $(HFILES)
 
-%.gcb: %.dol
-	@echo pack IPL ... $(notdir $@)
+#---------------------------------------------------------------------------------
+# GCI
+#---------------------------------------------------------------------------------
+%.gci: %.dol
+	@echo converting DOL to GCI ... $(notdir $@)
+	@dol2gci $< $@ boot.dol #TODO: should not use boot.dol save name?
+
+#---------------------------------------------------------------------------------
+# Qoob
+#---------------------------------------------------------------------------------
+$(OUTPUT).gcb: $(OUTPUT).dol
+	@echo packing Qoob IPL ... $(notdir $@)
 	@cd $(PWD); ./dol2ipl.py ipl.rom $< $@
 
-%.gci: %.dol
-	@echo dol2gci ... $(notdir $@)
-	@dol2gci $< $@ boot.dol
-
-$(OUTPUT)_xz.dol: $(OUTPUT).dol
-	@echo compress ... $(notdir $@)
-	@dolxz $< $@ -cube
-
-$(OUTPUT)_xz.elf: $(OUTPUT)_xz.dol
-	@echo dol2elf ... $(notdir $@)
-	@doltool -e $<
-
-%.qbsx: %.elf
-	@echo pack IPL ... $(notdir $@)
+#---------------------------------------------------------------------------------
+# Qoob SX
+#---------------------------------------------------------------------------------
+$(OUTPUT)_xz.qbsx: $(OUTPUT)_xz.elf
+	@echo packing Qoob SX IPL ... $(notdir $@)
 	@cd $(PWD); ./dol2ipl.py /dev/null $< $@
 
 $(OUTPUT_SX).elf: $(OUTPUT)_xz.qbsx
-	@echo splice ... $@
+	@echo splicing Qoob SX bios ... $(notdir $@)
 	@cd $(PWD); cp -f qoob_sx_13c_upgrade.elf $@
 	@cd $(PWD); dd if=$< of=$@ obs=4 seek=1851 conv=notrunc
 	@cd $(PWD); printf 'QOOB SX iplboot install\0' \
 		| dd of=$@ obs=4 seek=1810 conv=notrunc
 
-%.vgc: %.dol
-	@echo pack IPL ... $(notdir $@)
+#---------------------------------------------------------------------------------
+# Viper
+#---------------------------------------------------------------------------------
+$(OUTPUT).vgc: $(OUTPUT).dol
+	@echo packing Viper IPL... $(notdir $@)
 	@cd $(PWD); ./dol2ipl.py /dev/null $< $@
 
-%_xeno.elf: $(OFILES)
-	@echo linking ... $(notdir $@)
+#---------------------------------------------------------------------------------
+# Xeno
+#---------------------------------------------------------------------------------
+$(OUTPUT)_xeno.dol: $(OUTPUT)_xeno.elf
+$(OUTPUT)_xeno.elf: $(OFILES)
+	@echo linking Xeno ... $(notdir $@)
 	@$(LD)  $^ $(LDFLAGS) -Wl,--section-start,.init=0x81700000 $(LIBPATHS) $(LIBS) -o $@
 
-%.bin: %.elf
-	@echo extract binary ... $(notdir $@)
-	@$(OBJCOPY) -O binary $< $@
+#---------------------------------------------------------------------------------
+# Compression
+#---------------------------------------------------------------------------------
+$(OUTPUT)_xz.dol: $(OUTPUT).dol
+	@echo compressing DOL ... $(notdir $@)
+	@dolxz $< $@ -cube
+
+$(OUTPUT)_xz.elf: $(OUTPUT)_xz.dol
+	@echo converting compressed DOL to ELF ... $(notdir $@)
+	@doltool -e $< #TODO: Where does this tool come from?
 
 -include $(DEPENDS)
 

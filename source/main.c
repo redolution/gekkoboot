@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <ogc/lwp_watchdog.h>
 #include <fcntl.h>
+#include <ogc/system.h>
 #include "ffshim.h"
 #include "fatfs/ff.h"
 
@@ -14,6 +15,25 @@
 #define STUB_STACK 0x80003000
 
 u8 *dol = NULL;
+char *path = "/ipl.dol";
+
+struct shortcut {
+  u16 pad_buttons;
+  char *path;
+} shortcuts[] = {
+  {PAD_BUTTON_A,     "/a.dol"    },
+  {PAD_BUTTON_B,     "/b.dol"    },
+  {PAD_BUTTON_X,     "/x.dol"    },
+  {PAD_BUTTON_Y,     "/y.dol"    },
+  {PAD_TRIGGER_Z,    "/z.dol"    },
+  {PAD_BUTTON_START, "/start.dol"},
+  {PAD_BUTTON_LEFT,  "/left.dol" },
+  {PAD_BUTTON_RIGHT, "/right.dol"},
+  {PAD_BUTTON_UP,    "/up.dol"   },
+  // Down is reserved for debuging (delaying exit).
+  // NOTE: Shouldn't use L, R or Joysticks as analog inputs are calibrated on boot.
+};
+int num_shortcuts = sizeof(shortcuts)/sizeof(shortcuts[0]);
 
 void dol_alloc(int size)
 {
@@ -55,9 +75,9 @@ int load_fat(const char *slot_name, const DISC_INTERFACE *iface_)
     f_getlabel(slot_name, name, NULL);
     kprintf("Mounted %s as %s\n", name, slot_name);
 
-    kprintf("Reading ipl.dol\n");
+    kprintf("Reading %s\n", path);
     FIL file;
-    if (f_open(&file, "/ipl.dol", FA_READ) != FR_OK)
+    if (f_open(&file, path, FA_READ) != FR_OK)
     {
         kprintf("Failed to open file\n");
         res = 0;
@@ -180,6 +200,7 @@ extern u8 __xfb[];
 int main()
 {
     VIDEO_Init();
+    PAD_Init();
     GXRModeObj *rmode = VIDEO_GetPreferredMode(NULL);
     VIDEO_Configure(rmode);
     VIDEO_SetNextFramebuffer(__xfb);
@@ -208,6 +229,22 @@ int main()
     u32 t = ticks_to_secs(SYS_Time());
     settime(secs_to_ticks(t));
 
+    PAD_ScanPads();
+
+    u16 all_buttons_held = (
+        PAD_ButtonsHeld(PAD_CHAN0) |
+        PAD_ButtonsHeld(PAD_CHAN1) |
+        PAD_ButtonsHeld(PAD_CHAN2) |
+        PAD_ButtonsHeld(PAD_CHAN3)
+    );
+
+    for (int i = 0; i < num_shortcuts; i++) {
+      if (all_buttons_held & shortcuts[i].pad_buttons) {
+        path = shortcuts[i].path;
+        break;
+      }
+    }
+
     if (load_usb('B')) goto load;
 
     if (load_fat("sdb", &__io_gcsdb)) goto load;
@@ -219,6 +256,19 @@ int main()
     if (load_fat("sd2", &__io_gcsd2)) goto load;
 
 load:
+    // Wait to exit while the d-pad down direction is held.
+    while (all_buttons_held & PAD_BUTTON_DOWN)
+    {
+        VIDEO_WaitVSync();
+        PAD_ScanPads();
+        all_buttons_held = (
+            PAD_ButtonsHeld(PAD_CHAN0) |
+            PAD_ButtonsHeld(PAD_CHAN1) |
+            PAD_ButtonsHeld(PAD_CHAN2) |
+            PAD_ButtonsHeld(PAD_CHAN3)
+        );
+    }
+
     if (dol)
     {
         memcpy((void *) STUB_ADDR, stub, stub_size);

@@ -97,7 +97,6 @@ export INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
 #---------------------------------------------------------------------------------
 export LIBPATHS	:=	-L$(LIBOGC_LIB) $(foreach dir,$(LIBDIRS),-L$(dir)/lib)
 
-export OUTPUT	:=	$(CURDIR)/$(TARGET)
 .PHONY: all dol gci qoob qoobsx viper xeno compressed_dol compressed_gci $(BUILD) clean run
 
 export BUILD_MAKE := @mkdir -p $(BUILD) && $(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile

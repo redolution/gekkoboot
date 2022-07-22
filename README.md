@@ -2,6 +2,9 @@
 
 A minimal GameCube IPL
 
+
+## Usage
+
 iplboot will attempt to load DOLs from the following locations in order:
 - USB Gecko in Card Slot B
 - SD Gecko in Card Slot B
@@ -41,7 +44,7 @@ If you hold multiple buttons, the highest in the table takes priority. Also note
 **Something not working?** See the [troubleshooting section](#troubleshooting).
 
 
-## Usage
+## Installation
 
 Download the designated appropriate file for your device from the [latest release](https://github.com/redolution/iplboot/releases/latest).
 

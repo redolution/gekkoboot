@@ -41,6 +41,8 @@ This configuration would boot into the orginal GameCube intro by default, or Swi
 
 If you hold multiple buttons, the highest in the table takes priority. Also note that all directions are D-Pad buttons, *not* joysticks. Careful not to touch any of the analog controls (sticks and triggers) when powering on as this is when they are calibrated.
 
+iplboot also acts as a server for @emukidid's [usb-load](https://github.com/emukidid/gc-usb-load), should you want to use it for development purposes.
+
 **Something not working?** See the [troubleshooting section](#troubleshooting).
 
 
@@ -85,8 +87,6 @@ You should only need to compile if you want to modify to the iplboot source code
 1. Ensure you have the latest version of [devkitPro](https://devkitpro.org/wiki/Getting_Started) installed.
 2. Ensure you have the latest version of [libogc2](https://github.com/extremscorner/libogc2) installed (see [instructions](#installing-libogc2) below).
 3. Ensure your devkitPro environment variables are set: `DEVKITPRO` and `DEVKITPPC`
-
-iplboot also acts as a server for @emukidid's [usb-load](https://github.com/emukidid/gc-usb-load), should you want to use it for development purposes.
 
 ### PicoBoot
 

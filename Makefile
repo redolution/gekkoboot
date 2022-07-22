@@ -3,6 +3,10 @@
 #---------------------------------------------------------------------------------
 .SUFFIXES:
 #---------------------------------------------------------------------------------
+ifeq ($(strip $(DEVKITPRO)),)
+$(error "Please set DEVKITPRO in your environment. export DEVKITPRO=<path to>devkitPro")
+endif
+
 ifeq ($(strip $(DEVKITPPC)),)
 $(error "Please set DEVKITPPC in your environment. export DEVKITPPC=<path to>devkitPPC")
 endif
@@ -25,10 +29,10 @@ INCLUDES	:=
 # options for code generation
 #---------------------------------------------------------------------------------
 
-CFLAGS	= -g -O2 -Wall $(MACHDEP) $(INCLUDE)
-CXXFLAGS	=	$(CFLAGS)
+CFLAGS		= -g -O2 -Wall $(MACHDEP) $(INCLUDE)
+CXXFLAGS	= $(CFLAGS)
 
-LDFLAGS	=	-g $(MACHDEP) -Wl,-Map,$(notdir $@).map -T$(PWD)/ipl.ld
+LDFLAGS		= -g $(MACHDEP) -Wl,-Map,$(notdir $@).map -T$(PWD)/ipl.ld
 
 #---------------------------------------------------------------------------------
 # any extra libraries we wish to link with the project
@@ -48,8 +52,8 @@ LIBDIRS	:=
 ifneq ($(BUILD),$(notdir $(CURDIR)))
 #---------------------------------------------------------------------------------
 
-export OUTPUT	:=	$(CURDIR)/$(TARGET)
-export OUTPUT_SX := $(CURDIR)/qoob_sx_$(TARGET)_upgrade
+export OUTPUT		:=	$(CURDIR)/$(BUILD)/$(TARGET)
+export OUTPUT_SX	:=	$(CURDIR)/$(BUILD)/qoob_sx_$(TARGET)_upgrade
 
 export VPATH	:=	$(foreach dir,$(SOURCES),$(CURDIR)/$(dir)) \
 			$(foreach dir,$(DATA),$(CURDIR)/$(dir))
@@ -93,20 +97,34 @@ export INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
 #---------------------------------------------------------------------------------
 export LIBPATHS	:=	-L$(LIBOGC_LIB) $(foreach dir,$(LIBDIRS),-L$(dir)/lib)
 
-export OUTPUT	:=	$(CURDIR)/$(TARGET)
-.PHONY: $(BUILD) clean
+.PHONY: all dol gci qoobpro qoobsx viper dol_compressed gci_compressed $(BUILD) clean run
+
+export BUILD_MAKE := @mkdir -p $(BUILD) && $(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
 
 #---------------------------------------------------------------------------------
-$(BUILD):
-	@[ -d $@ ] || mkdir -p $@
-	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
+all: dol gci qoobpro viper dol_compressed gci_compressed
+dol:
+	$(BUILD_MAKE) $(OUTPUT).dol
+gci:
+	$(BUILD_MAKE) $(OUTPUT).gci
+qoobpro:
+	$(BUILD_MAKE) $(OUTPUT).gcb
+qoobsx:
+	$(BUILD_MAKE) $(OUTPUT_SX).elf
+viper:
+	$(BUILD_MAKE) $(OUTPUT).vgc
+dol_compressed:
+	$(BUILD_MAKE) $(OUTPUT)_xz.dol
+gci_compressed:
+	$(BUILD_MAKE) $(OUTPUT)_xz.gci
+
+#---------------------------------------------------------------------------------
+$(BUILD): all
 
 #---------------------------------------------------------------------------------
 clean:
 	@echo clean ...
-	@rm -fr $(BUILD) $(OUTPUT).{elf,dol} $(OUTPUT).{gcb,vgc} \
-		$(OUTPUT)_xz.{dol,elf,qbsx} $(OUTPUT_SX).{dol,elf} \
-		$(OUTPUT)_xeno.{bin,elf} $(OUTPUT){,_xz}.gci
+	@rm -rf $(BUILD)
 
 #---------------------------------------------------------------------------------
 run: $(BUILD)
@@ -120,51 +138,60 @@ DEPENDS	:=	$(OFILES:.o=.d)
 #---------------------------------------------------------------------------------
 # main targets
 #---------------------------------------------------------------------------------
-all: $(OUTPUT).gcb $(OUTPUT).vgc $(OUTPUT).gci $(OUTPUT)_xz.gci
 
+#---------------------------------------------------------------------------------
+# Base DOL
+#---------------------------------------------------------------------------------
 $(OUTPUT).dol: $(OUTPUT).elf
 $(OUTPUT).elf: $(OFILES)
 
 $(OFILES_SOURCES) : $(HFILES)
 
-%.gcb: %.dol
-	@echo pack IPL ... $(notdir $@)
-	@cd $(PWD); ./dol2ipl.py ipl.rom $< $@
-
+#---------------------------------------------------------------------------------
+# GCI
+#---------------------------------------------------------------------------------
 %.gci: %.dol
-	@echo dol2gci ... $(notdir $@)
+	@echo convert DOL to GCI ... $(notdir $@)
 	@dol2gci $< $@ boot.dol
 
-$(OUTPUT)_xz.dol: $(OUTPUT).dol
-	@echo compress ... $(notdir $@)
-	@dolxz $< $@ -cube
+#---------------------------------------------------------------------------------
+# Qoob Pro
+#---------------------------------------------------------------------------------
+$(OUTPUT).gcb: $(OUTPUT).dol
+	@echo pack Qoob Pro IPL ... $(notdir $@)
+	@cd $(PWD); ./dol2ipl.py ipl.rom $< $@
 
-$(OUTPUT)_xz.elf: $(OUTPUT)_xz.dol
-	@echo dol2elf ... $(notdir $@)
-	@doltool -e $<
-
-%.qbsx: %.elf
-	@echo pack IPL ... $(notdir $@)
+#---------------------------------------------------------------------------------
+# Qoob SX
+#---------------------------------------------------------------------------------
+$(OUTPUT)_xz.qbsx: $(OUTPUT)_xz.elf
+	@echo pack Qoob SX IPL ... $(notdir $@)
 	@cd $(PWD); ./dol2ipl.py /dev/null $< $@
 
 $(OUTPUT_SX).elf: $(OUTPUT)_xz.qbsx
-	@echo splice ... $@
+	@echo splice Qoob SX updater ... $(notdir $@)
 	@cd $(PWD); cp -f qoob_sx_13c_upgrade.elf $@
 	@cd $(PWD); dd if=$< of=$@ obs=4 seek=1851 conv=notrunc
 	@cd $(PWD); printf 'QOOB SX iplboot install\0' \
 		| dd of=$@ obs=4 seek=1810 conv=notrunc
 
-%.vgc: %.dol
-	@echo pack IPL ... $(notdir $@)
+#---------------------------------------------------------------------------------
+# Viper
+#---------------------------------------------------------------------------------
+$(OUTPUT).vgc: $(OUTPUT).dol
+	@echo pack Viper IPL... $(notdir $@)
 	@cd $(PWD); ./dol2ipl.py /dev/null $< $@
 
-%_xeno.elf: $(OFILES)
-	@echo linking ... $(notdir $@)
-	@$(LD)  $^ $(LDFLAGS) -Wl,--section-start,.init=0x81700000 $(LIBPATHS) $(LIBS) -o $@
+#---------------------------------------------------------------------------------
+# Compression
+#---------------------------------------------------------------------------------
+$(OUTPUT)_xz.dol: $(OUTPUT).dol
+	@echo compress DOL ... $(notdir $@)
+	@dolxz $< $@ -cube
 
-%.bin: %.elf
-	@echo extract binary ... $(notdir $@)
-	@$(OBJCOPY) -O binary $< $@
+$(OUTPUT)_xz.elf: $(OUTPUT)_xz.dol
+	@echo convert compressed DOL to ELF ... $(notdir $@)
+	@doltool -e $<
 
 -include $(DEPENDS)
 

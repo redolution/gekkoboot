@@ -2,7 +2,7 @@
 
 A minimal GameCube IPL
 
-IPLBoot will attempt to load DOLs from the following locations in order:
+iplboot will attempt to load DOLs from the following locations in order:
 - USB Gecko in Card Slot B
 - SD Gecko in Card Slot B
 - USB Gecko in Card Slot A
@@ -24,7 +24,7 @@ When loading from SD Gecko or SD2SP2, it will look for and load different filena
  D-Right     | `/right.dol`
  D-Up        | `/up.dol`
 
-If no DOL can be loaded, IPLBoot will boot the official IPL (GameCube intro and menu) instead.
+If no DOL can be loaded, iplboot will boot the official IPL (GameCube intro and menu) instead.
 
 For example, this configuration would boot straight into Swiss by default, or GBI if you held B, or the typical GameCube intro if you held any other button:
 - `/ipl.dol` - Swiss
@@ -49,7 +49,7 @@ Prepare your SD card by copying DOLs onto the SD card and renaming them accordin
 
 ### PicoBoot
 
-You can download ready-to-go firmware featuring IPLBoot directly from PicoBoot. Just follow the [installation guide](https://github.com/webhdx/PicoBoot#-installation-guide). This is likely what you want.
+You can download ready-to-go firmware featuring iplboot directly from PicoBoot. Just follow the [installation guide](https://github.com/webhdx/PicoBoot#-installation-guide). This is likely what you want.
 
 Otherwise, use `iplboot.dol` and follow the PicoBoot [compiling firmware](https://github.com/webhdx/PicoBoot#compiling-firmware) instructions to flash your Raspberry Pico.
 
@@ -72,18 +72,18 @@ Use `iplboot_xz.gci` and a GameCube memory card manager such as [GCMM](https://g
 
 ## Troubleshooting
 
-IPLBoot displays useful diagnostic messages as it attempts to load the selected DOL. But it's so fast you may not have time to read or even see them. If you hold the down direction on the D-Pad, the messages will remain on screen until you let go.
+iplboot displays useful diagnostic messages as it attempts to load the selected DOL. But it's so fast you may not have time to read or even see them. If you hold the down direction on the D-Pad, the messages will remain on screen until you let go.
 
 
 ## Compiling
 
-You should only need to compile if you want to modify to the IPLBoot source code. Otherwise, you can just download needed files from the [latest release](https://github.com/redolution/iplboot/releases/latest).
+You should only need to compile if you want to modify to the iplboot source code. Otherwise, you can just download needed files from the [latest release](https://github.com/redolution/iplboot/releases/latest).
 
 1. Ensure you have the latest version of [devkitPro](https://devkitpro.org/wiki/Getting_Started) installed.
 2. Ensure you have the latest version of [libogc2](https://github.com/extremscorner/libogc2) installed (see [instructions](#installing-libogc2) below).
 3. Ensure your devkitPro environment variables are set: `DEVKITPRO` and `DEVKITPPC`
 
-IPLBoot also acts as a server for @emukidid's [usb-load](https://github.com/emukidid/gc-usb-load), should you want to use it for development purposes.
+iplboot also acts as a server for @emukidid's [usb-load](https://github.com/emukidid/gc-usb-load), should you want to use it for development purposes.
 
 ### PicoBoot
 

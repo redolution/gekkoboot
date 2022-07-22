@@ -82,7 +82,7 @@ iplboot displays useful diagnostic messages as it attempts to load the selected 
 
 ## Compiling
 
-You should only need to compile if you want to modify to the iplboot source code. Otherwise, you can just download needed files from the [latest release](https://github.com/redolution/iplboot/releases/latest).
+You should only need to compile if you want to modify to the iplboot source code. Otherwise, you can just download prebuilt binaries from the [latest release](https://github.com/redolution/iplboot/releases/latest).
 
 1. Ensure you have the latest version of [devkitPro](https://devkitpro.org/wiki/Getting_Started) installed.
 2. Ensure you have the latest version of [libogc2](https://github.com/extremscorner/libogc2) installed (see [instructions](#installing-libogc2) below).

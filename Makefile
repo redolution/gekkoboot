@@ -169,7 +169,7 @@ $(OUTPUT)_xz.qbsx: $(OUTPUT)_xz.elf
 	@cd $(PWD); ./dol2ipl.py /dev/null $< $@
 
 $(OUTPUT_SX).elf: $(OUTPUT)_xz.qbsx
-	@echo splice Qoob SX bios ... $(notdir $@)
+	@echo splice Qoob SX updater ... $(notdir $@)
 	@cd $(PWD); cp -f qoob_sx_13c_upgrade.elf $@
 	@cd $(PWD); dd if=$< of=$@ obs=4 seek=1851 conv=notrunc
 	@cd $(PWD); printf 'QOOB SX iplboot install\0' \

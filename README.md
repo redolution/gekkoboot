@@ -64,9 +64,9 @@ Flash `iplboot.gcb` to your Qoob Pro as a BIOS.
 
 Qoob SX is not currently supported.
 
-### Viper
+### ViperGC
 
-Use `iplboot.vgc` to flash your Viper as a BIOS.
+Flash `iplboot.vgc` to your ViperGC as a BIOS.
 
 ### GameCube Memory Card
 

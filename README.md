@@ -85,7 +85,7 @@ iplboot displays useful diagnostic messages as it attempts to load the selected 
 You should only need to compile if you want to modify to the iplboot source code. Otherwise, you can just download prebuilt binaries from the [latest release](https://github.com/redolution/iplboot/releases/latest).
 
 1. Ensure you have the latest version of [devkitPro](https://devkitpro.org/wiki/Getting_Started) installed.
-2. Ensure you have the latest version of [libogc2](https://github.com/extremscorner/libogc2) installed (see [instructions](#installing-libogc2) below).
+2. Ensure you have the latest version of [libogc2](https://github.com/extremscorner/libogc2) installed.
 3. Ensure your devkitPro environment variables are set: `DEVKITPRO` and `DEVKITPPC`
 
 ### PicoBoot
@@ -103,8 +103,8 @@ You should only need to compile if you want to modify to the iplboot source code
 
 NOTE: Qoob SX is currently nonfunctional as the resulting BIOS is too large.
 
-1. Ensure dolxz is installed (see [instructions](#installing-dolxz) below).
-2. Ensure doltool is installed (see [instructions](#installing-doltool) below).
+1. Ensure [dolxz] is installed.
+2. Ensure [doltool] is installed.
 3. Obtain `qoob_sx_13c_upgrade.elf` and copy it to the root of this project. (TODO: MD5 and more details about the file.)
 4. Run `make qoobsx`.
 5. Follow usage instructions above using the newly created `build/qoob_sx_iplboot_upgrade.elf`
@@ -116,14 +116,14 @@ NOTE: Qoob SX is currently nonfunctional as the resulting BIOS is too large.
 
 ### GameCube Memory Card
 
-1. Ensure dol2gci is installed (see [instructions](#installing-dol2gci) below).
+1. Ensure [dol2gci] is installed.
 2. Run `make gci`.
 3. Follow usage instructions above using the newly created `build/iplboot.gci`.
 
 *Optional:* If you want to reduce the file size by ~50% so it will take up less space on your memory card, you can create a compressed version.
 
-1. Ensure dol2gci is installed (see [instructions](#installing-dol2gci) below).
-2. Ensure dolxz is installed (see [instructions](#installing-dolxz) below).
+1. Ensure [dol2gci] is installed.
+2. Ensure [dolxz] is installed.
 3. Run `make gci_compressed`.
 4. Follow usage instructions above using the newly created `build/iplboot_xz.gci` (Notice the `_xz` suffix).
 
@@ -131,37 +131,11 @@ NOTE: Qoob SX is currently nonfunctional as the resulting BIOS is too large.
 
 Should you need it, you can create a compressed version of the base DOL.
 
-1. Ensure dolxz is installed (see [instructions](#installing-dolxz) below).
+1. Ensure [dolxz] is installed.
 2. Run `make dol_compressed`.
 3. Follow usage instructions above using the newly created `build/iplboot_xz.dol` (Notice the `_xz` suffix).
 
 
-## Dependencies
-
-**NOTE:** Some of these are required only in certain scenarios and you may not need them. Check the instructions for your target device first.
-
-### Installing libogc2
-
-1. Ensure you have the latest version of [devkitPro](https://devkitpro.org/wiki/Getting_Started) installed.
-2. Clone or download the [libogc2 repo](https://github.com/extremscorner/libogc2).
-3. Run `make install`.
-
-### Installing dolxz
-
-1. Ensure you have the latest version of [devkitPro](https://devkitpro.org/wiki/Getting_Started) installed.
-2. Clone or download the [dolxz repo](https://github.com/yo1dog/dolxz).
-3. Run `make`.
-4. Ensure the resulting `dolxz` is executable (`chmod +x doltool`).
-5. Ensure `dolxz` is accessible from your `PATH` env var.
-
-### Installing dol2gci
-
-1. Download from [here](https://github.com/emukidid/swiss-gc/blob/master/buildtools/dol2gci?raw=true). Alternatively, you can clone or download the [swiss repo](https://github.com/emukidid/swiss-gc/tree/master/buildtools) and build yourself.
-2. Ensure `dol2gci` is executable (`chmod +x dol2gci`).
-3. Ensure `dol2gci` is accessible from your `PATH` env var.
-
-### Installing doltool
-
-1. Download from [here](https://github.com/redolution/Devkitpro-installer/blob/trunk/tools/gamecube/doltool/doltool?raw=true). Alternatively, you can clone or download the [archived repo](https://github.com/redolution/Devkitpro-installer/tree/trunk/tools/gamecube/doltool) and build yourself.
-2. Ensure `doltool` is executable (`chmod +x doltool`).
-3. Ensure `doltool` is accessible from your `PATH` env var.
+[dolxz]: https://github.com/yo1dog/dolxz
+[dol2gci]: https://github.com/emukidid/swiss-gc/tree/master/buildtools
+[doltool]: https://github.com/redolution/Devkitpro-installer/blob/trunk/tools/gamecube/doltool/

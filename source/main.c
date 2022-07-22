@@ -210,7 +210,7 @@ int main()
     VIDEO_WaitVSync();
     CON_Init(__xfb, 0, 0, rmode->fbWidth, rmode->xfbHeight, rmode->fbWidth * VI_DISPLAY_PIX_SZ);
 
-    kprintf("\n\nIPLboot\n");
+    kprintf("\n\niplboot\n");
 
     // Disable Qoob
     u32 val = 6 << 24;

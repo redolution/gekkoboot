@@ -52,13 +52,13 @@ Prepare your SD card by copying DOLs onto the SD card and renaming them accordin
 
 ### PicoBoot
 
-You can download ready-to-go firmware featuring iplboot directly from PicoBoot. Just follow the [installation guide](https://github.com/webhdx/PicoBoot#-installation-guide). This is likely what you want.
+You can download ready-to-go firmware featuring iplboot directly from the PicoBoot repo. Just follow the [installation guide](https://github.com/webhdx/PicoBoot#-installation-guide). This is likely what you want.
 
 Otherwise, use `iplboot.dol` and follow the PicoBoot [compiling firmware](https://github.com/webhdx/PicoBoot#compiling-firmware) instructions to flash your Raspberry Pico.
 
 ### Qoob Pro
 
-Use `iplboot.gcb` to flash your Qoob Pro as a BIOS.
+Flash `iplboot.gcb` to your Qoob Pro as a BIOS.
 
 ### Qoob SX
 

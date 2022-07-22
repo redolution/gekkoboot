@@ -12,7 +12,7 @@ iplboot will attempt to load DOLs from the following locations in order:
 - SD Gecko in Card Slot A
 - SD2SP2
 
-When loading from SD Gecko or SD2SP2, it will look for and load different filenames depending on what buttons are being held at boot. You can use this to change the boot behavior by holding a button on your controller. 
+When loading from an SD card, it will look for and load different filenames depending on what buttons are being held. This is useful to keep alternate software on quick access.
 
  Button Held | File Loaded
 -------------|--------------
@@ -27,13 +27,13 @@ When loading from SD Gecko or SD2SP2, it will look for and load different filena
  D-Right     | `/right.dol`
  D-Up        | `/up.dol`
 
-If no DOL can be loaded, iplboot will boot the official IPL (GameCube intro and menu) instead.
+If the selected file cannot be loaded, iplboot will reboot to the orginal IPL (GameCube intro and menu) instead.
 
-For example, this configuration would boot straight into Swiss by default, or GBI if you held B, or the typical GameCube intro if you held any other button:
+For example, this configuration would boot straight into Swiss by default, or GBI if you held B, or the orginal GameCube intro if you held any other button:
 - `/ipl.dol` - Swiss
 - `/b.dol` - GBI
 
-This configuration would boot into the typical GameCube intro by default, or Swiss if you held Z, or GBI if you held B:
+This configuration would boot into the orginal GameCube intro by default, or Swiss if you held Z, or GBI if you held B:
 - `/z.dol` - Swiss
 - `/b.dol` - GBI
 

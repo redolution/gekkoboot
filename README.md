@@ -91,13 +91,13 @@ You should only need to compile if you want to modify to the iplboot source code
 ### PicoBoot
 
 1. Run `make dol`.
-2. Follow usage instructions above using the newly created `build/iplboot.dol`.
+2. Follow installation instructions above using the newly created `build/iplboot.dol`.
 
 ### Qoob Pro
 
 1. Obtain the gc-pal-10 IPL ROM (MD5: `0cdda509e2da83c85bfe423dd87346cc`) and copy it to the root of this project as `ipl.rom`. This is currently the only IPL that has been verified to work.
 2. Run `make qoobpro`.
-3. Follow usage instructions above using the newly created `build/iplboot.gcb`.
+3. Follow installation instructions above using the newly created `build/iplboot.gcb`.
 
 ### Qoob SX
 
@@ -107,25 +107,25 @@ NOTE: Qoob SX is currently nonfunctional as the resulting BIOS is too large.
 2. Ensure [doltool] is installed.
 3. Obtain `qoob_sx_13c_upgrade.elf` and copy it to the root of this project. (TODO: MD5 and more details about the file.)
 4. Run `make qoobsx`.
-5. Follow usage instructions above using the newly created `build/qoob_sx_iplboot_upgrade.elf`
+5. Follow installation instructions above using the newly created `build/qoob_sx_iplboot_upgrade.elf`
 
 ### Viper
 
 1. Run `make viper`.
-2. Follow usage instructions above using the newly created `build/iplboot.vgc`.
+2. Follow installation instructions above using the newly created `build/iplboot.vgc`.
 
 ### GameCube Memory Card
 
 1. Ensure [dol2gci] is installed.
 2. Run `make gci`.
-3. Follow usage instructions above using the newly created `build/iplboot.gci`.
+3. Follow installation instructions above using the newly created `build/iplboot.gci`.
 
 *Optional:* If you want to reduce the file size by ~50% so it will take up less space on your memory card, you can create a compressed version.
 
 1. Ensure [dol2gci] is installed.
 2. Ensure [dolxz] is installed.
 3. Run `make gci_compressed`.
-4. Follow usage instructions above using the newly created `build/iplboot_xz.gci` (Notice the `_xz` suffix).
+4. Follow installation instructions above using the newly created `build/iplboot_xz.gci` (Notice the `_xz` suffix).
 
 ### Compressed DOL
 
@@ -133,7 +133,7 @@ Should you need it, you can create a compressed version of the base DOL.
 
 1. Ensure [dolxz] is installed.
 2. Run `make dol_compressed`.
-3. Follow usage instructions above using the newly created `build/iplboot_xz.dol` (Notice the `_xz` suffix).
+3. Follow installation instructions above using the newly created `build/iplboot_xz.dol` (Notice the `_xz` suffix).
 
 
 [dolxz]: https://github.com/yo1dog/dolxz

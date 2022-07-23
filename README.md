@@ -106,11 +106,9 @@ You should only need to compile if you want to modify to the iplboot source code
 
 NOTE: Qoob SX is currently nonfunctional as the resulting BIOS is too large.
 
-1. Ensure [dolxz] is installed.
-2. Ensure [doltool] is installed.
-3. Download Qoob BIOS v1.3c `Qoob (1.3c).rar` from this [archive post](https://www.gc-forever.com/forums/viewtopic.php?f=36&t=23) and extract `qoob_sx_13c_upgrade.elf` (MD5: `2292630e7604bc2ae8bfa4d3e4ba5941`) to the root of this project.
-4. Run `make qoobsx`.
-5. Follow installation instructions above using the newly created `build/qoob_sx_iplboot_upgrade.elf`
+1. Download Qoob BIOS v1.3c `Qoob (1.3c).rar` from this [archive post](https://www.gc-forever.com/forums/viewtopic.php?f=36&t=23) and extract `qoob_sx_13c_upgrade.elf` (MD5: `2292630e7604bc2ae8bfa4d3e4ba5941`) to the root of this project.
+2. Run `make qoobsx`.
+3. Follow installation instructions above using the newly created `build/qoob_sx_iplboot_upgrade.elf`
 
 ### Viper
 
@@ -119,26 +117,17 @@ NOTE: Qoob SX is currently nonfunctional as the resulting BIOS is too large.
 
 ### GameCube Memory Card
 
-1. Ensure [dol2gci] is installed.
-2. Run `make gci`.
-3. Follow installation instructions above using the newly created `build/iplboot.gci`.
+1. Run `make gci`.
+2. Follow installation instructions above using the newly created `build/iplboot.gci`.
 
 *Optional:* If you want to reduce the file size by ~50% so it will take up less space on your memory card, you can create a compressed version.
 
-1. Ensure [dol2gci] is installed.
-2. Ensure [dolxz] is installed.
-3. Run `make gci_compressed`.
-4. Follow installation instructions above using the newly created `build/iplboot_xz.gci` (Notice the `_xz` suffix).
+1. Run `make gci_compressed`.
+2. Follow installation instructions above using the newly created `build/iplboot_xz.gci` (Notice the `_xz` suffix).
 
 ### Compressed DOL
 
 Should you need it, you can create a compressed version of the base DOL.
 
-1. Ensure [dolxz] is installed.
-2. Run `make dol_compressed`.
-3. Follow installation instructions above using the newly created `build/iplboot_xz.dol` (Notice the `_xz` suffix).
-
-
-[dolxz]: https://github.com/yo1dog/dolxz
-[dol2gci]: https://github.com/emukidid/swiss-gc/tree/master/buildtools
-[doltool]: https://github.com/redolution/Devkitpro-installer/blob/trunk/tools/gamecube/doltool/
+1. Run `make dol_compressed`.
+2. Follow installation instructions above using the newly created `build/iplboot_xz.dol` (Notice the `_xz` suffix).

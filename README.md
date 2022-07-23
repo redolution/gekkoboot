@@ -64,7 +64,9 @@ Flash `iplboot.gcb` to your Qoob Pro as a BIOS.
 
 ### Qoob SX
 
-Qoob SX is not currently supported.
+Qoob SX is not currently supported due to size constraints.
+
+The last version available for the Qoob SX is [r5.2](https://github.com/redolution/iplboot/releases/tag/r5.2). Download `qoob_sx_iplboot_upgrade.elf` and flash it to your Qoob SX as a BIOS.
 
 ### ViperGC
 

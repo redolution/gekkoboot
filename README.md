@@ -106,7 +106,7 @@ NOTE: Qoob SX is currently nonfunctional as the resulting BIOS is too large.
 
 1. Ensure [dolxz] is installed.
 2. Ensure [doltool] is installed.
-3. Obtain `qoob_sx_13c_upgrade.elf` and copy it to the root of this project. (TODO: MD5 and more details about the file.)
+3. Download Qoob BIOS v1.3c `Qoob (1.3c).rar` from this [archive post](https://www.gc-forever.com/forums/viewtopic.php?f=36&t=23) and extract `qoob_sx_13c_upgrade.elf` (MD5: `2292630e7604bc2ae8bfa4d3e4ba5941`) to the root of this project.
 4. Run `make qoobsx`.
 5. Follow installation instructions above using the newly created `build/qoob_sx_iplboot_upgrade.elf`
 

@@ -87,6 +87,7 @@ You should only need to compile if you want to modify to the iplboot source code
 1. Ensure you have the latest version of [devkitPro](https://devkitpro.org/wiki/Getting_Started) installed.
 2. Ensure you have the latest version of [libogc2](https://github.com/extremscorner/libogc2) installed.
 3. Ensure your devkitPro environment variables are set: `DEVKITPRO` and `DEVKITPPC`
+4. Python3 is required.
 
 ### PicoBoot
 

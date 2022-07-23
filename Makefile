@@ -97,6 +97,23 @@ export INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
 #---------------------------------------------------------------------------------
 export LIBPATHS	:=	-L$(LIBOGC_LIB) $(foreach dir,$(LIBDIRS),-L$(dir)/lib)
 
+#---------------------------------------------------------------------------------
+# build tools
+#---------------------------------------------------------------------------------
+export BUILDTOOLS	:=	$(CURDIR)/buildtools
+export DOL2IPL		:=	$(BUILDTOOLS)/dol2ipl.py
+ifeq ($(OS),Windows_NT)
+export DOLXZ		:=	$(BUILDTOOLS)/dolxz.exe
+export DOL2GCI		:=	$(BUILDTOOLS)/dol2gci.exe
+export DOLTOOL		:=	$(BUILDTOOLS)/doltool.exe
+else
+export DOLXZ		:=	$(BUILDTOOLS)/dolxz
+export DOL2GCI		:=	$(BUILDTOOLS)/dol2gci
+export DOLTOOL		:=	$(BUILDTOOLS)/doltool
+endif
+
+#---------------------------------------------------------------------------------
+
 .PHONY: all dol gci qoobpro qoobsx viper dol_compressed gci_compressed $(BUILD) clean run
 
 export BUILD_MAKE := @mkdir -p $(BUILD) && $(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
@@ -151,22 +168,22 @@ $(OFILES_SOURCES) : $(HFILES)
 # GCI
 #---------------------------------------------------------------------------------
 %.gci: %.dol
-	@echo convert DOL to GCI ... $(notdir $@)
-	@dol2gci $< $@ boot.dol
+	@echo convert DOL to GCI ... $(notdir $@) $(DOL2GCI)
+	@$(DOL2GCI) $< $@ boot.dol
 
 #---------------------------------------------------------------------------------
 # Qoob Pro
 #---------------------------------------------------------------------------------
 $(OUTPUT).gcb: $(OUTPUT).dol
 	@echo pack Qoob Pro IPL ... $(notdir $@)
-	@cd $(PWD); ./dol2ipl.py ipl.rom $< $@
+	@cd $(PWD); $(DOL2IPL) ipl.rom $< $@
 
 #---------------------------------------------------------------------------------
 # Qoob SX
 #---------------------------------------------------------------------------------
 $(OUTPUT)_xz.qbsx: $(OUTPUT)_xz.elf
 	@echo pack Qoob SX IPL ... $(notdir $@)
-	@cd $(PWD); ./dol2ipl.py /dev/null $< $@
+	@cd $(PWD); $(DOL2IPL) /dev/null $< $@
 
 $(OUTPUT_SX).elf: $(OUTPUT)_xz.qbsx
 	@echo splice Qoob SX updater ... $(notdir $@)
@@ -180,18 +197,18 @@ $(OUTPUT_SX).elf: $(OUTPUT)_xz.qbsx
 #---------------------------------------------------------------------------------
 $(OUTPUT).vgc: $(OUTPUT).dol
 	@echo pack Viper IPL... $(notdir $@)
-	@cd $(PWD); ./dol2ipl.py /dev/null $< $@
+	@cd $(PWD); $(DOL2IPL) /dev/null $< $@
 
 #---------------------------------------------------------------------------------
 # Compression
 #---------------------------------------------------------------------------------
 $(OUTPUT)_xz.dol: $(OUTPUT).dol
 	@echo compress DOL ... $(notdir $@)
-	@dolxz $< $@ -cube
+	@$(DOLXZ) $< $@ -cube
 
 $(OUTPUT)_xz.elf: $(OUTPUT)_xz.dol
 	@echo convert compressed DOL to ELF ... $(notdir $@)
-	@doltool -e $<
+	@$(DOLTOOL) -e $<
 
 -include $(DEPENDS)
 

@@ -98,9 +98,24 @@ You should only need to compile if you want to modify to the iplboot source code
 
 ### Qoob Pro
 
-1. Obtain the gc-pal-10 IPL ROM (MD5: `0cdda509e2da83c85bfe423dd87346cc`) and copy it to the root of this project as `ipl.rom`. This is currently the only IPL that has been verified to work.
-2. Run `make qoobpro`.
-3. Follow installation instructions above using the newly created `build/iplboot.gcb`.
+Qoob Pro requires IPL BS1 (don't worry if you don't know what that is). This can be obtained from an existing Qoob Pro BIOS or any IPL dump.
+
+To use an existing Qoob Pro BIOS (easiest method):
+1. Download `iplboot.gcb` from the [latest release](https://github.com/redolution/iplboot/releases/latest).
+2. Rename `iplboot.gcb` to `ipl.rom` and place it at the root of this project.
+
+Alternatively, you can dump the IPL ROM from your own GameCube using Swiss:
+1. Ensure file management is enabled in Swiss settings: Press B, select the gear icon at bottom right, press R until you reach "Advanced Settings", scroll down to "File Management", press right to enable, save and exit.
+2. Switch to the system device: Select the eject icon at bottom left, scroll right to "System", press A.
+3. Scroll down to `ipl.bin`, press Z then X, and copy to your SD card.
+4. Copy `ipl.bin` from your SD card to the root of this project. Rename it to `ipl.rom`.
+
+Alternatively, obtain an IPL dump from somewhere else and rename it to `ipl.rom`.
+
+You should now have `ipl.rom` at the project root.
+
+1. Run `make qoobpro`.
+2. Follow installation instructions above using the newly created `build/iplboot.gcb`.
 
 ### Qoob SX
 

@@ -17,6 +17,8 @@
 
 u8 *dol = NULL;
 char *path = "/ipl.dol";
+int argc = 0;
+char *argv[1024];
 
 struct shortcut {
   u16 pad_buttons;
@@ -54,6 +56,84 @@ void dol_alloc(int size)
     if (!dol)
     {
         kprintf("Couldn't allocate memory\n");
+    }
+}
+
+void load_parse_cli()
+{
+    int path_length = strlen(path);
+    path[path_length - 3] = 'c';
+    path[path_length - 2] = 'l';
+    path[path_length - 1] = 'i';
+
+    kprintf("Reading %s\n", path);
+    FIL file;
+    FRESULT result = f_open(&file, path, FA_READ);
+    if (result != FR_OK)
+    {
+        if (result == FR_NO_FILE)
+        {
+            kprintf("CLI file not found\n");
+        }
+        else
+        {
+            kprintf("Failed to open CLI file\n");
+        }
+        return;
+    }
+
+    size_t size = f_size(&file);
+    kprintf("CLI size is %iB\n", size);
+
+    if (size <= 0)
+    {
+        kprintf("Empty CLI\n");
+        return;
+    }
+
+    u8 *cli = (u8 *) memalign(32, size + 1);
+
+    if (!cli)
+    {
+        kprintf("Couldn't allocate memory for CLI\n");
+        return;
+    }
+
+    UINT _;
+    f_read(&file, cli, size, &_);
+    f_close(&file);
+
+    if (cli[size - 1] != '\0')
+    {
+      cli[size] = '\0';
+      size++;
+    }
+
+    // Parse CLI file
+    // https://github.com/emukidid/swiss-gc/blob/a0fa06d81360ad6d173acd42e4dd5495e268de42/cube/swiss/source/swiss.c#L1236
+    argv[argc] = (char*)&curFile.name;
+    argc++;
+
+    // First argument is at the beginning of the file
+    if (cli[0] != '\r' && cli[0] != '\n')
+    {
+        argv[argc] = cli;
+        argc++;
+    }
+
+    // Search for the others after each newline
+    for (int i = 0; i < size; i++)
+    {
+        if (cli[i] == '\r' || cli[i] == '\n')
+        {
+            cli[i] = '\0';
+        }
+        else if (cli[i - 1] == '\0')
+        {
+            argv[argc] = cli + i;
+            argc++;
+            if (argc >= 1024) break;
+        }
     }
 }
 
@@ -97,6 +177,9 @@ int load_fat(const char *slot_name, const DISC_INTERFACE *iface_)
     UINT _;
     f_read(&file, dol, size, &_);
     f_close(&file);
+
+    // Attempt to load and parse CLI file
+    load_parse_cli();
 
 unmount:
     kprintf("Unmounting %s\n", slot_name);
@@ -278,6 +361,7 @@ load:
         DCStoreRange((void *) STUB_ADDR, stub_size);
 
         SYS_ResetSystem(SYS_SHUTDOWN, 0, FALSE);
+        // How to pass argv?
         SYS_SwitchFiber((intptr_t) dol, 0,
                         (intptr_t) NULL, 0,
                         STUB_ADDR, STUB_STACK);

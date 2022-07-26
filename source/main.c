@@ -83,11 +83,11 @@ void load_parse_cli()
     }
 
     size_t size = f_size(&file);
-    kprintf("CLI size is %iB\n", size);
+    kprintf("CLI file size is %iB\n", size);
 
     if (size <= 0)
     {
-        kprintf("Empty CLI\n");
+        kprintf("Empty CLI file\n");
         return;
     }
 
@@ -95,7 +95,7 @@ void load_parse_cli()
 
     if (!cli)
     {
-        kprintf("Couldn't allocate memory for CLI\n");
+        kprintf("Couldn't allocate memory for CLI file\n");
         return;
     }
 
@@ -135,6 +135,8 @@ void load_parse_cli()
             if (dol_argc >= 1024) break;
         }
     }
+    
+    kprintf("Found %i CLI args\n", dol_argc);
 }
 
 int load_fat(const char *slot_name, const DISC_INTERFACE *iface_)

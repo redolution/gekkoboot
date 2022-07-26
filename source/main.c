@@ -375,22 +375,32 @@ load:
                 size_t arg_length = strlen(dol_argv[i]) + 1;
                 dolargs.length += arg_length;
             }
+
+            kprintf("CLI argv size is %iB\n", dolargs.length);
             dolargs.commandLine = (char *) memalign(32, dolargs.length);
 
-            unsigned int position = 0;
-            for (int i = 0; i < dol_argc; i++)
+            if (!dolargs.commandLine)
             {
-                size_t arg_length = strlen(dol_argv[i]) + 1;
-                memcpy(dolargs.commandLine + position, dol_argv[i], arg_length);
-                position += arg_length;
+                kprintf("Couldn't allocate memory for CLI argv\n");
+                dolargs.length = 0;
             }
-            dolargs.commandLine[dolargs.length - 1] = '\0';
-            DCStoreRange(dolargs.commandLine, dolargs.length);
-            
-            // kprintf("argc: %i\n", dol_argc);
-            // for (int i = 0; i < dol_argc; ++i) {
-            //     kprintf("arg%i: %s\n", i, dol_argv[i]);
-            // }
+            else
+            {
+                unsigned int position = 0;
+                for (int i = 0; i < dol_argc; i++)
+                {
+                    size_t arg_length = strlen(dol_argv[i]) + 1;
+                    memcpy(dolargs.commandLine + position, dol_argv[i], arg_length);
+                    position += arg_length;
+                }
+                dolargs.commandLine[dolargs.length - 1] = '\0';
+                DCStoreRange(dolargs.commandLine, dolargs.length);
+                
+                // kprintf("argc: %i\n", dol_argc);
+                // for (int i = 0; i < dol_argc; ++i) {
+                //     kprintf("arg%i: %s\n", i, dol_argv[i]);
+                // }
+            }
         }
 
         memcpy((void *) STUB_ADDR, stub, stub_size);

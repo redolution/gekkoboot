@@ -92,7 +92,7 @@ void load_parse_cli()
         return;
     }
 
-    char *cli = (char *) memalign(32, size + 1);
+    char *cli = (char *) malloc(size + 1);
 
     if (!cli)
     {
@@ -380,7 +380,7 @@ load:
             }
 
             kprintf("CLI argv size is %iB\n", dolargs.length);
-            dolargs.commandLine = (char *) memalign(32, dolargs.length);
+            dolargs.commandLine = (char *) malloc(dolargs.length);
 
             if (!dolargs.commandLine)
             {

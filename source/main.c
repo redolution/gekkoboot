@@ -18,7 +18,7 @@
 u8 *dol = NULL;
 char *path = "/ipl.dol";
 int dol_argc = 0;
-const int MAX_NUM_ARGV = 1024;
+#define MAX_NUM_ARGV 1024
 char *dol_argv[MAX_NUM_ARGV];
 u16 all_buttons_held;
 

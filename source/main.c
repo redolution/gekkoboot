@@ -367,67 +367,68 @@ int main()
     if (load_fat("sd2", &__io_gcsd2)) goto load;
 
 load:
-    if (dol)
+    if (!dol)
     {
-        struct __argv dolargs;
-        dolargs.commandLine = (char *) NULL;
-        dolargs.length = 0;
-        
-        // https://github.com/emukidid/swiss-gc/blob/f5319aab248287c847cb9468325ebcf54c993fb1/cube/swiss/source/aram/sidestep.c#L350
-        if (dol_argc)
-        {
-            dolargs.argvMagic = ARGV_MAGIC;
-            dolargs.argc = dol_argc;
-            dolargs.length = 1;
+        // If we reach here, all attempts to load a DOL failed
+        // Since we've disabled the Qoob, we wil reboot to the Nintendo IPL
+        delay_exit();
+        return 0;
+    }
+    
+    struct __argv dolargs;
+    dolargs.commandLine = (char *) NULL;
+    dolargs.length = 0;
+    
+    // https://github.com/emukidid/swiss-gc/blob/f5319aab248287c847cb9468325ebcf54c993fb1/cube/swiss/source/aram/sidestep.c#L350
+    if (dol_argc)
+    {
+        dolargs.argvMagic = ARGV_MAGIC;
+        dolargs.argc = dol_argc;
+        dolargs.length = 1;
 
+        for (int i = 0; i < dol_argc; i++)
+        {
+            size_t arg_length = strlen(dol_argv[i]) + 1;
+            dolargs.length += arg_length;
+        }
+
+        kprintf("CLI argv size is %iB\n", dolargs.length);
+        dolargs.commandLine = (char *) malloc(dolargs.length);
+
+        if (!dolargs.commandLine)
+        {
+            kprintf("Couldn't allocate memory for CLI argv\n");
+            dolargs.length = 0;
+        }
+        else
+        {
+            unsigned int position = 0;
             for (int i = 0; i < dol_argc; i++)
             {
                 size_t arg_length = strlen(dol_argv[i]) + 1;
-                dolargs.length += arg_length;
+                memcpy(dolargs.commandLine + position, dol_argv[i], arg_length);
+                position += arg_length;
             }
-
-            kprintf("CLI argv size is %iB\n", dolargs.length);
-            dolargs.commandLine = (char *) malloc(dolargs.length);
-
-            if (!dolargs.commandLine)
-            {
-                kprintf("Couldn't allocate memory for CLI argv\n");
-                dolargs.length = 0;
+            dolargs.commandLine[dolargs.length - 1] = '\0';
+            DCStoreRange(dolargs.commandLine, dolargs.length);
+            
+            #if VERBOSE_LOGGING
+            kprintf("argc: %i\n", dol_argc);
+            for (int i = 0; i < dol_argc; ++i) {
+                kprintf("arg%i: %s\n", i, dol_argv[i]);
             }
-            else
-            {
-                unsigned int position = 0;
-                for (int i = 0; i < dol_argc; i++)
-                {
-                    size_t arg_length = strlen(dol_argv[i]) + 1;
-                    memcpy(dolargs.commandLine + position, dol_argv[i], arg_length);
-                    position += arg_length;
-                }
-                dolargs.commandLine[dolargs.length - 1] = '\0';
-                DCStoreRange(dolargs.commandLine, dolargs.length);
-                
-                #if VERBOSE_LOGGING
-                kprintf("argc: %i\n", dol_argc);
-                for (int i = 0; i < dol_argc; ++i) {
-                    kprintf("arg%i: %s\n", i, dol_argv[i]);
-                }
-                #endif
-            }
+            #endif
         }
-
-        memcpy((void *) STUB_ADDR, stub, stub_size);
-        DCStoreRange((void *) STUB_ADDR, stub_size);
-
-        delay_exit();
-
-        SYS_ResetSystem(SYS_SHUTDOWN, 0, FALSE);
-        SYS_SwitchFiber((intptr_t) dol, 0,
-                        (intptr_t) dolargs.commandLine, dolargs.length,
-                        STUB_ADDR, STUB_STACK);
     }
 
-    // If we reach here, all attempts to load a DOL failed
-    // Since we've disabled the Qoob, we wil reboot to the Nintendo IPL
+    memcpy((void *) STUB_ADDR, stub, stub_size);
+    DCStoreRange((void *) STUB_ADDR, stub_size);
+
     delay_exit();
+
+    SYS_ResetSystem(SYS_SHUTDOWN, 0, FALSE);
+    SYS_SwitchFiber((intptr_t) dol, 0,
+                    (intptr_t) dolargs.commandLine, dolargs.length,
+                    STUB_ADDR, STUB_STACK);
     return 0;
 }

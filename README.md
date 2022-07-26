@@ -98,7 +98,7 @@ You should only need to compile if you want to modify to the iplboot source code
 
 ### Qoob Pro
 
-Qoob Pro requires IPL BS1 (don't worry if you don't know what that is). This can be obtained from an existing Qoob Pro BIOS or any IPL dump.
+Qoob Pro requires BS1 (early hardware initialization code) from the original IPL. This can be obtained from an existing Qoob Pro BIOS or any IPL dump.
 
 To use an existing Qoob Pro BIOS (easiest method):
 1. Download `iplboot.gcb` from the [latest release](https://github.com/redolution/iplboot/releases/latest).
@@ -109,8 +109,6 @@ Alternatively, you can dump the IPL ROM from your own GameCube using Swiss:
 2. Switch to the system device: Select the eject icon at bottom left, scroll right to "System", press A.
 3. Scroll down to `ipl.bin`, press Z then X, and copy to your SD card.
 4. Copy `ipl.bin` from your SD card to the root of this project. Rename it to `ipl.rom`.
-
-Alternatively, obtain an IPL dump from somewhere else and rename it to `ipl.rom`.
 
 You should now have `ipl.rom` at the project root.
 

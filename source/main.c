@@ -15,6 +15,8 @@
 #define STUB_ADDR  0x80001000
 #define STUB_STACK 0x80003000
 
+#define VERBOSE_LOGGING 0
+
 u8 *dol = NULL;
 char *path = "/ipl.dol";
 int dol_argc = 0;
@@ -404,10 +406,12 @@ load:
                 dolargs.commandLine[dolargs.length - 1] = '\0';
                 DCStoreRange(dolargs.commandLine, dolargs.length);
                 
-                // kprintf("argc: %i\n", dol_argc);
-                // for (int i = 0; i < dol_argc; ++i) {
-                //     kprintf("arg%i: %s\n", i, dol_argv[i]);
-                // }
+                #if VERBOSE_LOGGING
+                kprintf("argc: %i\n", dol_argc);
+                for (int i = 0; i < dol_argc; ++i) {
+                    kprintf("arg%i: %s\n", i, dol_argv[i]);
+                }
+                #endif
             }
         }
 

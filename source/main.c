@@ -19,6 +19,7 @@ u8 *dol = NULL;
 char *path = "/ipl.dol";
 int dol_argc = 0;
 char *dol_argv[1024];
+u16 all_buttons_held;
 
 struct shortcut {
   u16 pad_buttons;
@@ -285,6 +286,21 @@ end:
 
 extern u8 __xfb[];
 
+void delay_exit() {
+    // Wait while the d-pad down direction is held.
+    while (all_buttons_held & PAD_BUTTON_DOWN)
+    {
+        VIDEO_WaitVSync();
+        PAD_ScanPads();
+        all_buttons_held = (
+            PAD_ButtonsHeld(PAD_CHAN0) |
+            PAD_ButtonsHeld(PAD_CHAN1) |
+            PAD_ButtonsHeld(PAD_CHAN2) |
+            PAD_ButtonsHeld(PAD_CHAN3)
+        );
+    }
+}
+
 int main()
 {
     VIDEO_Init();
@@ -319,7 +335,7 @@ int main()
 
     PAD_ScanPads();
 
-    u16 all_buttons_held = (
+    all_buttons_held = (
         PAD_ButtonsHeld(PAD_CHAN0) |
         PAD_ButtonsHeld(PAD_CHAN1) |
         PAD_ButtonsHeld(PAD_CHAN2) |
@@ -344,19 +360,6 @@ int main()
     if (load_fat("sd2", &__io_gcsd2)) goto load;
 
 load:
-    // Wait to exit while the d-pad down direction is held.
-    while (all_buttons_held & PAD_BUTTON_DOWN)
-    {
-        VIDEO_WaitVSync();
-        PAD_ScanPads();
-        all_buttons_held = (
-            PAD_ButtonsHeld(PAD_CHAN0) |
-            PAD_ButtonsHeld(PAD_CHAN1) |
-            PAD_ButtonsHeld(PAD_CHAN2) |
-            PAD_ButtonsHeld(PAD_CHAN3)
-        );
-    }
-
     if (dol)
     {
         struct __argv dolargs;
@@ -406,6 +409,8 @@ load:
         memcpy((void *) STUB_ADDR, stub, stub_size);
         DCStoreRange((void *) STUB_ADDR, stub_size);
 
+        delay_exit();
+
         SYS_ResetSystem(SYS_SHUTDOWN, 0, FALSE);
         SYS_SwitchFiber((intptr_t) dol, 0,
                         (intptr_t) dolargs.commandLine, dolargs.length,
@@ -414,5 +419,6 @@ load:
 
     // If we reach here, all attempts to load a DOL failed
     // Since we've disabled the Qoob, we wil reboot to the Nintendo IPL
+    delay_exit();
     return 0;
 }

@@ -18,7 +18,8 @@
 u8 *dol = NULL;
 char *path = "/ipl.dol";
 int dol_argc = 0;
-char *dol_argv[1024];
+const int MAX_NUM_ARGV = 1024;
+char *dol_argv[MAX_NUM_ARGV];
 u16 all_buttons_held;
 
 struct shortcut {
@@ -133,7 +134,11 @@ void load_parse_cli()
         {
             dol_argv[dol_argc] = cli + i;
             dol_argc++;
-            if (dol_argc >= 1024) break;
+            if (dol_argc >= MAX_NUM_ARGV)
+            {
+                kprintf("Reached max of %i args.\n", MAX_NUM_ARGV);
+                break;
+            }
         }
     }
     

@@ -391,14 +391,6 @@ load:
             // for (int i = 0; i < dol_argc; ++i) {
             //     kprintf("arg%i: %s\n", i, dol_argv[i]);
             // }
-            // char *debug = (char *) malloc(dolargs.length);
-            // memcpy(debug, dolargs.commandLine, dolargs.length);
-            // for (int i = 0; i < dolargs.length - 1; ++i) {
-            //     if (debug[i] == '\0') {
-            //         debug[i] = '|';
-            //     }
-            // }
-            // kprintf("cmd: %s\n", debug);
         }
 
         memcpy((void *) STUB_ADDR, stub, stub_size);

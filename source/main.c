@@ -9,6 +9,7 @@
 #include <ogc/system.h>
 #include "ffshim.h"
 #include "fatfs/ff.h"
+#include "utils.h"
 
 #include "stub.h"
 #define STUB_ADDR  0x80001000
@@ -64,9 +65,10 @@ int load_fat(const char *slot_name, const DISC_INTERFACE *iface_)
 
     FATFS fs;
     iface = iface_;
-    if (f_mount(&fs, "", 1) != FR_OK)
+    FRESULT mount_result = f_mount(&fs, "", 1);
+    if (mount_result != FR_OK)
     {
-        kprintf("Couldn't mount %s\n", slot_name);
+        kprintf("Couldn't mount %s: %s\n", slot_name, get_fresult_message(mount_result));
         res = 0;
         goto end;
     }
@@ -77,9 +79,10 @@ int load_fat(const char *slot_name, const DISC_INTERFACE *iface_)
 
     kprintf("Reading %s\n", path);
     FIL file;
-    if (f_open(&file, path, FA_READ) != FR_OK)
+    FRESULT open_result = f_open(&file, path, FA_READ);
+    if (open_result != FR_OK)
     {
-        kprintf("Failed to open file\n");
+        kprintf("Failed to open file: %s\n", get_fresult_message(open_result));
         res = 0;
         goto unmount;
     }

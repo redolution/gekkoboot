@@ -17,8 +17,8 @@
 
 u8 *dol = NULL;
 char *path = "/ipl.dol";
-int argc = 0;
-char *argv[1024];
+int dol_argc = 0;
+char *dol_argv[1024];
 
 struct shortcut {
   u16 pad_buttons;
@@ -91,7 +91,7 @@ void load_parse_cli()
         return;
     }
 
-    u8 *cli = (u8 *) memalign(32, size + 1);
+    char *cli = (char *) memalign(32, size + 1);
 
     if (!cli)
     {
@@ -111,14 +111,14 @@ void load_parse_cli()
 
     // Parse CLI file
     // https://github.com/emukidid/swiss-gc/blob/a0fa06d81360ad6d173acd42e4dd5495e268de42/cube/swiss/source/swiss.c#L1236
-    argv[argc] = (char*)&curFile.name;
-    argc++;
+    dol_argv[dol_argc] = path;
+    dol_argc++;
 
     // First argument is at the beginning of the file
     if (cli[0] != '\r' && cli[0] != '\n')
     {
-        argv[argc] = cli;
-        argc++;
+        dol_argv[dol_argc] = cli;
+        dol_argc++;
     }
 
     // Search for the others after each newline
@@ -130,9 +130,9 @@ void load_parse_cli()
         }
         else if (cli[i - 1] == '\0')
         {
-            argv[argc] = cli + i;
-            argc++;
-            if (argc >= 1024) break;
+            dol_argv[dol_argc] = cli + i;
+            dol_argc++;
+            if (dol_argc >= 1024) break;
         }
     }
 }
@@ -357,13 +357,54 @@ load:
 
     if (dol)
     {
+        struct __argv dolargs;
+        dolargs.commandLine = (char *) NULL;
+        dolargs.length = 0;
+        
+        // https://github.com/emukidid/swiss-gc/blob/f5319aab248287c847cb9468325ebcf54c993fb1/cube/swiss/source/aram/sidestep.c#L350
+        if (dol_argc)
+        {
+            dolargs.argvMagic = ARGV_MAGIC;
+            dolargs.argc = dol_argc;
+            dolargs.length = 1;
+
+            for (int i = 0; i < dol_argc; i++)
+            {
+                size_t arg_length = strlen(dol_argv[i]) + 1;
+                dolargs.length += arg_length;
+            }
+            dolargs.commandLine = (char *) memalign(32, dolargs.length);
+
+            unsigned int position = 0;
+            for (int i = 0; i < dol_argc; i++)
+            {
+                size_t arg_length = strlen(dol_argv[i]) + 1;
+                memcpy(dolargs.commandLine + position, dol_argv[i], arg_length);
+                position += arg_length;
+            }
+            dolargs.commandLine[dolargs.length - 1] = '\0';
+            DCStoreRange(dolargs.commandLine, dolargs.length);
+            
+            // kprintf("argc: %i\n", dol_argc);
+            // for (int i = 0; i < dol_argc; ++i) {
+            //     kprintf("arg%i: %s\n", i, dol_argv[i]);
+            // }
+            // char *debug = (char *) malloc(dolargs.length);
+            // memcpy(debug, dolargs.commandLine, dolargs.length);
+            // for (int i = 0; i < dolargs.length - 1; ++i) {
+            //     if (debug[i] == '\0') {
+            //         debug[i] = '|';
+            //     }
+            // }
+            // kprintf("cmd: %s\n", debug);
+        }
+
         memcpy((void *) STUB_ADDR, stub, stub_size);
         DCStoreRange((void *) STUB_ADDR, stub_size);
 
         SYS_ResetSystem(SYS_SHUTDOWN, 0, FALSE);
-        // How to pass argv?
         SYS_SwitchFiber((intptr_t) dol, 0,
-                        (intptr_t) NULL, 0,
+                        (intptr_t) dolargs.commandLine, dolargs.length,
                         STUB_ADDR, STUB_STACK);
     }
 

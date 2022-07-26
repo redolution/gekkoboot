@@ -78,7 +78,7 @@ void load_parse_cli()
         }
         else
         {
-            kprintf("Failed to open CLI file\n");
+            kprintf("Failed to open CLI file: %s\n", get_fresult_message(result));
         }
         return;
     }

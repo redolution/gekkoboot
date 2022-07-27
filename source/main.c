@@ -377,6 +377,7 @@ load:
     {
         // If we reach here, all attempts to load a DOL failed
         // Since we've disabled the Qoob, we wil reboot to the Nintendo IPL
+        kprintf("No DOL loaded. Rebooting into original IPL...\n");
         delay_exit();
         return 0;
     }

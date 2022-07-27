@@ -145,6 +145,12 @@ void load_parse_cli()
     }
     
     kprintf("Found %i CLI args\n", dol_argc);
+
+    #if VERBOSE_LOGGING
+    for (int i = 0; i < dol_argc; ++i) {
+        kprintf("arg%i: %s\n", i, dol_argv[i]);
+    }
+    #endif
 }
 
 int load_fat(const char *slot_name, const DISC_INTERFACE *iface_)
@@ -411,13 +417,6 @@ load:
             }
             dolargs.commandLine[dolargs.length - 1] = '\0';
             DCStoreRange(dolargs.commandLine, dolargs.length);
-            
-            #if VERBOSE_LOGGING
-            kprintf("argc: %i\n", dol_argc);
-            for (int i = 0; i < dol_argc; ++i) {
-                kprintf("arg%i: %s\n", i, dol_argv[i]);
-            }
-            #endif
         }
     }
 

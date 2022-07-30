@@ -108,6 +108,8 @@ def main():
         print("Unknown input format")
         return -1
 
+    header = bytearray(b"iplboot".ljust(256, b"\x00"))
+
     if sys.argv[3].endswith(".gcb"):
         bs1[0x51C + 2:0x51C + 4] = struct.pack(">H", load >> 16)
         bs1[0x520 + 2:0x520 + 4] = struct.pack(">H", load & 0xFFFF)
@@ -136,8 +138,6 @@ def main():
         out = header + scramble(bytearray(0x720) + img)[0x720:]
 
     elif sys.argv[3].endswith(".qbsx"):
-        header = bytearray(b"iplboot".ljust(256, b"\x00"))
-
         # SX BIOSes are always one page long
         header[0xFD] = 1
 

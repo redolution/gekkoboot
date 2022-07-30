@@ -15,8 +15,14 @@
 #define STUB_ADDR  0x80001000
 #define STUB_STACK 0x80003000
 
+#define VERBOSE_LOGGING 0
+
 u8 *dol = NULL;
 char *path = "/ipl.dol";
+int dol_argc = 0;
+#define MAX_NUM_ARGV 1024
+char *dol_argv[MAX_NUM_ARGV];
+u16 all_buttons_held;
 
 struct shortcut {
   u16 pad_buttons;
@@ -55,6 +61,96 @@ void dol_alloc(int size)
     {
         kprintf("Couldn't allocate memory\n");
     }
+}
+
+void load_parse_cli()
+{
+    int path_length = strlen(path);
+    path[path_length - 3] = 'c';
+    path[path_length - 2] = 'l';
+    path[path_length - 1] = 'i';
+
+    kprintf("Reading %s\n", path);
+    FIL file;
+    FRESULT result = f_open(&file, path, FA_READ);
+    if (result != FR_OK)
+    {
+        if (result == FR_NO_FILE)
+        {
+            kprintf("CLI file not found\n");
+        }
+        else
+        {
+            kprintf("Failed to open CLI file: %s\n", get_fresult_message(result));
+        }
+        return;
+    }
+
+    size_t size = f_size(&file);
+    kprintf("CLI file size is %iB\n", size);
+
+    if (size <= 0)
+    {
+        kprintf("Empty CLI file\n");
+        return;
+    }
+
+    char *cli = (char *) malloc(size + 1);
+
+    if (!cli)
+    {
+        kprintf("Couldn't allocate memory for CLI file\n");
+        return;
+    }
+
+    UINT _;
+    f_read(&file, cli, size, &_);
+    f_close(&file);
+
+    if (cli[size - 1] != '\0')
+    {
+      cli[size] = '\0';
+      size++;
+    }
+
+    // Parse CLI file
+    // https://github.com/emukidid/swiss-gc/blob/a0fa06d81360ad6d173acd42e4dd5495e268de42/cube/swiss/source/swiss.c#L1236
+    dol_argv[dol_argc] = path;
+    dol_argc++;
+
+    // First argument is at the beginning of the file
+    if (cli[0] != '\r' && cli[0] != '\n')
+    {
+        dol_argv[dol_argc] = cli;
+        dol_argc++;
+    }
+
+    // Search for the others after each newline
+    for (int i = 0; i < size; i++)
+    {
+        if (cli[i] == '\r' || cli[i] == '\n')
+        {
+            cli[i] = '\0';
+        }
+        else if (cli[i - 1] == '\0')
+        {
+            dol_argv[dol_argc] = cli + i;
+            dol_argc++;
+            if (dol_argc >= MAX_NUM_ARGV)
+            {
+                kprintf("Reached max of %i args.\n", MAX_NUM_ARGV);
+                break;
+            }
+        }
+    }
+    
+    kprintf("Found %i CLI args\n", dol_argc);
+
+    #if VERBOSE_LOGGING
+    for (int i = 0; i < dol_argc; ++i) {
+        kprintf("arg%i: %s\n", i, dol_argv[i]);
+    }
+    #endif
 }
 
 int load_fat(const char *slot_name, const DISC_INTERFACE *iface_)
@@ -97,6 +193,9 @@ int load_fat(const char *slot_name, const DISC_INTERFACE *iface_)
     UINT _;
     f_read(&file, dol, size, &_);
     f_close(&file);
+
+    // Attempt to load and parse CLI file
+    load_parse_cli();
 
 unmount:
     kprintf("Unmounting %s\n", slot_name);
@@ -200,6 +299,21 @@ end:
 
 extern u8 __xfb[];
 
+void delay_exit() {
+    // Wait while the d-pad down direction is held.
+    while (all_buttons_held & PAD_BUTTON_DOWN)
+    {
+        VIDEO_WaitVSync();
+        PAD_ScanPads();
+        all_buttons_held = (
+            PAD_ButtonsHeld(PAD_CHAN0) |
+            PAD_ButtonsHeld(PAD_CHAN1) |
+            PAD_ButtonsHeld(PAD_CHAN2) |
+            PAD_ButtonsHeld(PAD_CHAN3)
+        );
+    }
+}
+
 int main()
 {
     VIDEO_Init();
@@ -234,7 +348,7 @@ int main()
 
     PAD_ScanPads();
 
-    u16 all_buttons_held = (
+    all_buttons_held = (
         PAD_ButtonsHeld(PAD_CHAN0) |
         PAD_ButtonsHeld(PAD_CHAN1) |
         PAD_ButtonsHeld(PAD_CHAN2) |
@@ -259,31 +373,62 @@ int main()
     if (load_fat("sd2", &__io_gcsd2)) goto load;
 
 load:
-    // Wait to exit while the d-pad down direction is held.
-    while (all_buttons_held & PAD_BUTTON_DOWN)
+    if (!dol)
     {
-        VIDEO_WaitVSync();
-        PAD_ScanPads();
-        all_buttons_held = (
-            PAD_ButtonsHeld(PAD_CHAN0) |
-            PAD_ButtonsHeld(PAD_CHAN1) |
-            PAD_ButtonsHeld(PAD_CHAN2) |
-            PAD_ButtonsHeld(PAD_CHAN3)
-        );
+        // If we reach here, all attempts to load a DOL failed
+        // Since we've disabled the Qoob, we wil reboot to the Nintendo IPL
+        kprintf("No DOL loaded. Rebooting into original IPL...\n");
+        delay_exit();
+        return 0;
+    }
+    
+    struct __argv dolargs;
+    dolargs.commandLine = (char *) NULL;
+    dolargs.length = 0;
+    
+    // https://github.com/emukidid/swiss-gc/blob/f5319aab248287c847cb9468325ebcf54c993fb1/cube/swiss/source/aram/sidestep.c#L350
+    if (dol_argc)
+    {
+        dolargs.argvMagic = ARGV_MAGIC;
+        dolargs.argc = dol_argc;
+        dolargs.length = 1;
+
+        for (int i = 0; i < dol_argc; i++)
+        {
+            size_t arg_length = strlen(dol_argv[i]) + 1;
+            dolargs.length += arg_length;
+        }
+
+        kprintf("CLI argv size is %iB\n", dolargs.length);
+        dolargs.commandLine = (char *) malloc(dolargs.length);
+
+        if (!dolargs.commandLine)
+        {
+            kprintf("Couldn't allocate memory for CLI argv\n");
+            dolargs.length = 0;
+        }
+        else
+        {
+            unsigned int position = 0;
+            for (int i = 0; i < dol_argc; i++)
+            {
+                size_t arg_length = strlen(dol_argv[i]) + 1;
+                memcpy(dolargs.commandLine + position, dol_argv[i], arg_length);
+                position += arg_length;
+            }
+            dolargs.commandLine[dolargs.length - 1] = '\0';
+            DCStoreRange(dolargs.commandLine, dolargs.length);
+        }
     }
 
-    if (dol)
-    {
-        memcpy((void *) STUB_ADDR, stub, stub_size);
-        DCStoreRange((void *) STUB_ADDR, stub_size);
+    memcpy((void *) STUB_ADDR, stub, stub_size);
+    DCStoreRange((void *) STUB_ADDR, stub_size);
 
-        SYS_ResetSystem(SYS_SHUTDOWN, 0, FALSE);
-        SYS_SwitchFiber((intptr_t) dol, 0,
-                        (intptr_t) NULL, 0,
-                        STUB_ADDR, STUB_STACK);
-    }
+    delay_exit();
 
-    // If we reach here, all attempts to load a DOL failed
-    // Since we've disabled the Qoob, we wil reboot to the Nintendo IPL
+    SYS_ResetSystem(SYS_SHUTDOWN, 0, FALSE);
+    SYS_SwitchFiber((intptr_t) dol, 0,
+                    (intptr_t) dolargs.commandLine, dolargs.length,
+                    STUB_ADDR, STUB_STACK);
     return 0;
 }

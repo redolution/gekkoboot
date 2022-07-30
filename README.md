@@ -27,6 +27,8 @@ When loading from an SD card, it will look for and load different filenames depe
  D-Right     | `/right.dol`
  D-Up        | `/up.dol`
 
+CLI files are also supported.
+
 If the selected file cannot be loaded, iplboot will reboot to the orginal IPL (GameCube intro and menu) instead.
 
 For example, this configuration would boot straight into Swiss by default, or GBI if you held B, or the orginal GameCube intro if you held any other button:

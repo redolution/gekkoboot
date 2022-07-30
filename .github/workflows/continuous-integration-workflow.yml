@@ -1,0 +1,37 @@
+name: iplboot build
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    name: Build iplboot
+    runs-on: ubuntu-latest
+    container: devkitpro/devkitppc:latest
+
+    steps:
+    - name: Checkout iplboot
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+
+    - name: Fetch Qoob prebuilt
+      run: curl -Lo ipl.rom https://github.com/redolution/iplboot/releases/download/r5.2/iplboot.gcb
+
+    - name: Checkout libogc2
+      uses: actions/checkout@v2
+      with:
+        repository: extremscorner/libogc2
+        path: libogc2
+
+    - name: Build libogc2
+      run: make install
+      working-directory: libogc2
+
+    - name: Build iplboot artifacts
+      run: make
+
+    - name: Upload iplboot artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: iplboot
+        path: build/iplboot*

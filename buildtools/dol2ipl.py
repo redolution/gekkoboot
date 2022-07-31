@@ -108,7 +108,7 @@ def main():
         print("Unknown input format")
         return -1
 
-    header = bytearray(b"iplboot".ljust(256, b"\x00"))
+    header = bytearray(b"(C) iplboot".ljust(256, b"\x00"))
 
     if sys.argv[3].endswith(".gcb"):
         bs1[0x51C + 2:0x51C + 4] = struct.pack(">H", load >> 16)

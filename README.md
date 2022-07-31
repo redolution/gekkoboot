@@ -26,13 +26,13 @@ When loading from an SD card, it will look for and load different filenames depe
 
 CLI files are also supported.
 
-If the selected file cannot be loaded, iplboot will reboot to the orginal IPL (GameCube intro and menu) instead.
+If the selected file cannot be loaded, iplboot will reboot to the original IPL (GameCube intro and menu) instead.
 
-For example, this configuration would boot straight into Swiss by default, or GBI if you held B, or the orginal GameCube intro if you held any other button:
+For example, this configuration would boot straight into Swiss by default, or GBI if you held B, or the original GameCube intro if you held any other button:
 - `/ipl.dol` - Swiss
 - `/b.dol` - GBI
 
-This configuration would boot into the orginal GameCube intro by default, or Swiss if you held Z, or GBI if you held B:
+This configuration would boot into the original GameCube intro by default, or Swiss if you held Z, or GBI if you held B:
 - `/z.dol` - Swiss
 - `/b.dol` - GBI
 

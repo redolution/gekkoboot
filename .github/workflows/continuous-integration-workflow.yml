@@ -27,7 +27,7 @@ jobs:
 
     - name: Build libogc2
       run: |
-        sed -i 's/-O2/-Os/' Makefile
+        sed -i 's/-O2/-Os -flto/' Makefile
         make install
       working-directory: libogc2
 

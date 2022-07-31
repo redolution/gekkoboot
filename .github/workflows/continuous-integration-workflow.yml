@@ -24,7 +24,9 @@ jobs:
         path: libogc2
 
     - name: Build libogc2
-      run: make install
+      run: |
+        sed -i 's/-O2/-Os/' Makefile
+        make install
       working-directory: libogc2
 
     - name: Build iplboot artifacts

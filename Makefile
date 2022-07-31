@@ -127,7 +127,7 @@ gci:
 qoobpro:
 	$(BUILD_MAKE) $(OUTPUT).gcb
 qoobsx:
-	$(BUILD_MAKE) $(OUTPUT_SX).elf
+	$(BUILD_MAKE) $(OUTPUT_SX).elf $(OUTPUT_SX).dol
 viper:
 	$(BUILD_MAKE) $(OUTPUT).vgc
 dol_compressed:

@@ -300,8 +300,17 @@ end:
 extern u8 __xfb[];
 
 void delay_exit() {
-    // Wait while the d-pad down direction is held.
-    while (all_buttons_held & PAD_BUTTON_DOWN)
+    // Wait while the d-pad down direction or reset button is held.
+    if (all_buttons_held & PAD_BUTTON_DOWN)
+    {
+        kprintf("(release d-pad down to continue)\n");
+    }
+    if (SYS_ResetButtonDown())
+    {
+        kprintf("(release reset button to continue)\n");
+    }
+
+    while (all_buttons_held & PAD_BUTTON_DOWN || SYS_ResetButtonDown())
     {
         VIDEO_WaitVSync();
         PAD_ScanPads();
@@ -354,6 +363,17 @@ int main()
         PAD_ButtonsHeld(PAD_CHAN2) |
         PAD_ButtonsHeld(PAD_CHAN3)
     );
+
+    if (all_buttons_held & PAD_BUTTON_LEFT || SYS_ResetButtonDown())
+    {
+        // Since we've disabled the Qoob, we wil reboot to the Nintendo IPL
+        kprintf("Skipped. Rebooting into original IPL...\n");
+        delay_exit();
+        return 0;
+    }
+
+    char *paths[2];
+    int num_paths = 0;
 
     for (int i = 0; i < num_shortcuts; i++) {
       if (all_buttons_held & shortcuts[i].pad_buttons) {

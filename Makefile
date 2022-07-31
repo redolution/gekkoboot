@@ -119,7 +119,7 @@ endif
 export BUILD_MAKE := @mkdir -p $(BUILD) && $(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
 
 #---------------------------------------------------------------------------------
-all: dol gci qoobpro viper dol_compressed gci_compressed
+all: dol gci qoobpro qoobsx viper dol_compressed gci_compressed
 dol:
 	$(BUILD_MAKE) $(OUTPUT).dol
 gci:

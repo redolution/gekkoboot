@@ -34,11 +34,8 @@ struct shortcut {
   {PAD_BUTTON_Y,     "/y.dol"    },
   {PAD_TRIGGER_Z,    "/z.dol"    },
   {PAD_BUTTON_START, "/start.dol"},
-  {PAD_BUTTON_LEFT,  "/left.dol" },
-  {PAD_BUTTON_RIGHT, "/right.dol"},
-  {PAD_BUTTON_UP,    "/up.dol"   },
-  // Down is reserved for debuging (delaying exit).
   // NOTE: Shouldn't use L, R or Joysticks as analog inputs are calibrated on boot.
+  // Should also avoid D-Pad as it is used for special functionality.
 };
 int num_shortcuts = sizeof(shortcuts)/sizeof(shortcuts[0]);
 
@@ -303,8 +300,17 @@ end:
 extern u8 __xfb[];
 
 void delay_exit() {
-    // Wait while the d-pad down direction is held.
-    while (all_buttons_held & PAD_BUTTON_DOWN)
+    // Wait while the d-pad down direction or reset button is held.
+    if (all_buttons_held & PAD_BUTTON_DOWN)
+    {
+        kprintf("(release d-pad down to continue)\n");
+    }
+    if (SYS_ResetButtonDown())
+    {
+        kprintf("(release reset button to continue)\n");
+    }
+
+    while (all_buttons_held & PAD_BUTTON_DOWN || SYS_ResetButtonDown())
     {
         VIDEO_WaitVSync();
         PAD_ScanPads();
@@ -357,6 +363,14 @@ int main()
         PAD_ButtonsHeld(PAD_CHAN2) |
         PAD_ButtonsHeld(PAD_CHAN3)
     );
+
+    if (all_buttons_held & PAD_BUTTON_LEFT || SYS_ResetButtonDown())
+    {
+        // Since we've disabled the Qoob, we wil reboot to the Nintendo IPL
+        kprintf("Skipped. Rebooting into original IPL...\n");
+        delay_exit();
+        return 0;
+    }
 
     char *paths[2];
     int num_paths = 0;

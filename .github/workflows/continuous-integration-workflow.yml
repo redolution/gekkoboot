@@ -38,4 +38,6 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: iplboot
-        path: build/iplboot*
+        path: |
+          build/iplboot*
+          build/qoob_sx_iplboot_upgrade.*

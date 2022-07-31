@@ -38,6 +38,8 @@ This configuration would boot into the orginal GameCube intro by default, or Swi
 
 **Pro-tip:** You can prevent files from showing in Swiss by marking them as hidden files on the SD card.
 
+If you hold multiple buttons, the highest in the table takes priority. Be careful not to touch any of the analog controls (sticks and triggers) when powering on as this is when they are calibrated.
+
 iplboot also acts as a server for @emukidid's [usb-load](https://github.com/emukidid/gc-usb-load), should you want to use it for development purposes.
 
 **Something not working?** See the [troubleshooting section](#troubleshooting).

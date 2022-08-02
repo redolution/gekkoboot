@@ -34,11 +34,8 @@ struct shortcut {
   {PAD_BUTTON_Y,     "/y.dol"    },
   {PAD_TRIGGER_Z,    "/z.dol"    },
   {PAD_BUTTON_START, "/start.dol"},
-  {PAD_BUTTON_LEFT,  "/left.dol" },
-  {PAD_BUTTON_RIGHT, "/right.dol"},
-  {PAD_BUTTON_UP,    "/up.dol"   },
-  // Down is reserved for debuging (delaying exit).
   // NOTE: Shouldn't use L, R or Joysticks as analog inputs are calibrated on boot.
+  // Should also avoid D-Pad as it is used for special functionality.
 };
 int num_shortcuts = sizeof(shortcuts)/sizeof(shortcuts[0]);
 

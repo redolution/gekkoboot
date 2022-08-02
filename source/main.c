@@ -18,12 +18,12 @@
 #define VERBOSE_LOGGING 0
 
 u8 *dol = NULL;
-char *path = "/ipl.dol";
 int dol_argc = 0;
 #define MAX_NUM_ARGV 1024
 char *dol_argv[MAX_NUM_ARGV];
 u16 all_buttons_held;
 
+char *default_path = "/ipl.dol";
 struct shortcut {
   u16 pad_buttons;
   char *path;
@@ -63,7 +63,7 @@ void dol_alloc(int size)
     }
 }
 
-void load_parse_cli()
+void load_parse_cli(char *path)
 {
     int path_length = strlen(path);
     path[path_length - 3] = 'c';
@@ -153,9 +153,9 @@ void load_parse_cli()
     #endif
 }
 
-int load_fat(const char *slot_name, const DISC_INTERFACE *iface_)
+int load_fat(const char *slot_name, const DISC_INTERFACE *iface_, char **paths, int num_paths)
 {
-    int res = 1;
+    int res = 0;
 
     kprintf("Trying %s\n", slot_name);
 
@@ -165,7 +165,6 @@ int load_fat(const char *slot_name, const DISC_INTERFACE *iface_)
     if (mount_result != FR_OK)
     {
         kprintf("Couldn't mount %s: %s\n", slot_name, get_fresult_message(mount_result));
-        res = 0;
         goto end;
     }
 
@@ -173,31 +172,35 @@ int load_fat(const char *slot_name, const DISC_INTERFACE *iface_)
     f_getlabel(slot_name, name, NULL);
     kprintf("Mounted %s as %s\n", name, slot_name);
 
-    kprintf("Reading %s\n", path);
-    FIL file;
-    FRESULT open_result = f_open(&file, path, FA_READ);
-    if (open_result != FR_OK)
+    for (int i = 0; i < num_paths; ++i)
     {
-        kprintf("Failed to open file: %s\n", get_fresult_message(open_result));
-        res = 0;
-        goto unmount;
+        char *path = paths[i];
+        kprintf("Reading %s\n", path);
+        FIL file;
+        FRESULT open_result = f_open(&file, path, FA_READ);
+        if (open_result != FR_OK)
+        {
+            kprintf("Failed to open file: %s\n", get_fresult_message(open_result));
+            continue;
+        }
+
+        size_t size = f_size(&file);
+        dol_alloc(size);
+        if (!dol)
+        {
+            continue;
+        }
+        UINT _;
+        f_read(&file, dol, size, &_);
+        f_close(&file);
+
+        // Attempt to load and parse CLI file
+        load_parse_cli(path);
+
+        res = 1;
+        break;
     }
 
-    size_t size = f_size(&file);
-    dol_alloc(size);
-    if (!dol)
-    {
-        res = 0;
-        goto unmount;
-    }
-    UINT _;
-    f_read(&file, dol, size, &_);
-    f_close(&file);
-
-    // Attempt to load and parse CLI file
-    load_parse_cli();
-
-unmount:
     kprintf("Unmounting %s\n", slot_name);
     iface->shutdown();
     iface = NULL;
@@ -355,22 +358,27 @@ int main()
         PAD_ButtonsHeld(PAD_CHAN3)
     );
 
+    char *paths[2];
+    int num_paths = 0;
+
     for (int i = 0; i < num_shortcuts; i++) {
       if (all_buttons_held & shortcuts[i].pad_buttons) {
-        path = shortcuts[i].path;
+        paths[num_paths++] = shortcuts[i].path;
         break;
       }
     }
 
+    paths[num_paths++] = default_path;
+
     if (load_usb('B')) goto load;
 
-    if (load_fat("sdb", &__io_gcsdb)) goto load;
+    if (load_fat("sdb", &__io_gcsdb, paths, num_paths)) goto load;
 
     if (load_usb('A')) goto load;
 
-    if (load_fat("sda", &__io_gcsda)) goto load;
+    if (load_fat("sda", &__io_gcsda, paths, num_paths)) goto load;
 
-    if (load_fat("sd2", &__io_gcsd2)) goto load;
+    if (load_fat("sd2", &__io_gcsd2, paths, num_paths)) goto load;
 
 load:
     if (!dol)

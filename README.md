@@ -12,7 +12,7 @@ iplboot will attempt to load DOLs from the following locations in order:
 - SD Gecko in Card Slot A
 - SD2SP2
 
-When loading from an SD card, it will look for and load different filenames depending on what buttons are being held. This is useful to keep alternate software on quick access.
+You can use button shortcuts to keep alternate software on quick access. When loading from an SD card, iplboot will look for and load different filenames depending on what buttons are being held:
 
  Button Held | File Loaded
 -------------|--------------
@@ -26,7 +26,7 @@ When loading from an SD card, it will look for and load different filenames depe
 
 CLI files are also supported.
 
-If the selected file cannot be loaded, iplboot will reboot to the original IPL (GameCube intro and menu) instead.
+If the selected shortcut file cannot be loaded, iplboot will fall back to `/ipl.dol`. If that cannot be loaded either, the next device will be searched. If all fails, iplboot will reboot to the onboard IPL (original GameCube intro and menu).
 
 For example, this configuration would boot straight into Swiss by default, or GBI if you held B, or the original GameCube intro if you held any other button:
 - `/ipl.dol` - Swiss
@@ -79,6 +79,8 @@ Use `iplboot_xz.gci` and a GameCube memory card manager such as [GCMM](https://g
 ## Troubleshooting
 
 iplboot displays useful diagnostic messages as it attempts to load the selected DOL. But it's so fast you may not have time to read or even see them. If you hold the down direction on the D-Pad, the messages will remain on screen until you let go.
+
+When choosing a shortcut button, beware that some software checks for buttons held at boot to alter certain behaviors. If your software behaves differently when booted through iplboot, ensure the assigned shortcut button is not used in this way. For example, it is not recommended to assign Swiss to the B button as holding B causes Swiss to disable the DVD drive.
 
 
 ## Compiling

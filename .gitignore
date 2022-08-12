@@ -2,8 +2,7 @@
 /dist
 *.dol
 *.elf
-
-ipl.rom
+*.rom
 *.gcb
 *.qbsx
 *.vgc
@@ -17,3 +16,4 @@ ipl.rom
 !res/qoob_sx_13c_upgrade.elf
 
 .direnv
+/.vscode

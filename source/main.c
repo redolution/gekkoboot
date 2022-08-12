@@ -7,10 +7,9 @@
 #include <ogc/lwp_watchdog.h>
 #include <fcntl.h>
 #include <ogc/system.h>
-#include "ffshim.h"
-#include "fatfs/ff.h"
-#include "utils.h"
+#include <gccore.h>
 #include "shortcut.h"
+#include "filesystem.h"
 #include "cli_args.h"
 
 #include "stub.h"
@@ -18,8 +17,6 @@
 #define STUB_STACK 0x80003000
 
 #define VERBOSE_LOGGING 0
-
-u8 *dol = NULL;
 
 char *default_path = "/ipl.dol";
 
@@ -50,27 +47,6 @@ void wait_for_confirmation()
     while (last_state || !cur_state);
 }
 
-void dol_alloc(int size)
-{
-    int mram_size = (SYS_GetArenaHi() - SYS_GetArenaLo());
-    kprintf("Memory available: %iB\n", mram_size);
-
-    kprintf("DOL size is %iB\n", size);
-
-    if (size <= 0)
-    {
-        kprintf("Empty DOL\n");
-        return;
-    }
-
-    dol = (u8 *) memalign(32, size);
-
-    if (!dol)
-    {
-        kprintf("Couldn't allocate memory\n");
-    }
-}
-
 void load_parse_cli(struct __argv *argv, char *path)
 {
     int path_length = strlen(path);
@@ -79,91 +55,42 @@ void load_parse_cli(struct __argv *argv, char *path)
     path[path_length - 1] = 'i';
 
     kprintf("Reading %s\n", path);
-    FIL file;
-    FRESULT result = f_open(&file, path, FA_READ);
-    if (result != FR_OK)
+    const char *cli;
+    FS_RESULT result = fs_read_file_string(&cli, path);
+    if (!result)
     {
-        if (result == FR_NO_FILE)
-        {
-            kprintf("CLI file not found\n");
-        }
-        else
-        {
-            kprintf("Failed to open CLI file: %s\n", get_fresult_message(result));
-        }
         return;
-    }
-
-    size_t size = f_size(&file);
-    kprintf("CLI file size is %iB\n", size);
-
-    if (size <= 0)
-    {
-        kprintf("Empty CLI file\n");
-        return;
-    }
-
-    char *cli = (char *) malloc(size + 1);
-
-    if (!cli)
-    {
-        kprintf("Couldn't allocate memory for CLI file\n");
-        return;
-    }
-
-    UINT _;
-    f_read(&file, cli, size, &_);
-    f_close(&file);
-
-    if (cli[size - 1] != '\0')
-    {
-      cli[size] = '\0';
-      size++;
     }
 
     parse_cli_args(argv, cli);
 }
 
-int load_fat(const char *slot_name, const DISC_INTERFACE *iface_, char **paths, int num_paths, struct __argv *argv)
+int load_fat(const char *slot_name, const DISC_INTERFACE *iface_, char **paths, int num_paths, u8 **dol, struct __argv *argv)
 {
     int res = 0;
 
     kprintf("Trying %s\n", slot_name);
 
-    FATFS fs;
-    iface = iface_;
-    FRESULT mount_result = f_mount(&fs, "", 1);
-    if (mount_result != FR_OK)
+    FS_RESULT mount_result = fs_mount(iface_);
+    if (mount_result != FS_OK)
     {
-        kprintf("Couldn't mount %s: %s\n", slot_name, get_fresult_message(mount_result));
+        kprintf("Couldn't mount %s: %s\n", slot_name, get_fs_result_message(mount_result));
         goto end;
     }
 
     char name[256];
-    f_getlabel(slot_name, name, NULL);
+    fs_get_volume_label(slot_name, name);
     kprintf("Mounted %s as %s\n", name, slot_name);
 
     for (int i = 0; i < num_paths; ++i)
     {
         char *path = paths[i];
         kprintf("Reading %s\n", path);
-        FIL file;
-        FRESULT open_result = f_open(&file, path, FA_READ);
-        if (open_result != FR_OK)
-        {
-            kprintf("Failed to open file: %s\n", get_fresult_message(open_result));
-            continue;
-        }
-
-        size_t size = f_size(&file);
-        dol_alloc(size);
-        if (!dol)
+        FS_RESULT read_result = fs_read_file((void **)dol, path);
+        if (read_result != FS_OK)
         {
             continue;
         }
-        UINT _;
-        f_read(&file, dol, size, &_);
-        f_close(&file);
 
         // Attempt to load and parse CLI file
         load_parse_cli(argv, path);
@@ -173,8 +100,7 @@ int load_fat(const char *slot_name, const DISC_INTERFACE *iface_, char **paths, 
     }
 
     kprintf("Unmounting %s\n", slot_name);
-    iface->shutdown();
-    iface = NULL;
+    fs_unmount();
 
 end:
     return res;
@@ -197,7 +123,7 @@ unsigned int convert_int(unsigned int in)
 #define GC_READY 0x88
 #define GC_OK    0x89
 
-int load_usb(char slot)
+int load_usb(char slot, u8 **dol_)
 {
     kprintf("Trying USB Gecko in slot %c\n", slot);
 
@@ -248,8 +174,14 @@ int load_usb(char slot)
     usb_recvbuffer_safe(channel, &size, 4);
     size = convert_int(size);
 
-    dol_alloc(size);
-    unsigned char* pointer = dol;
+    if (size <= 0)
+    {
+        kprintf("DOL is empty\n");
+        return res;
+    }
+    kprintf("DOL size is %iB\n", size);
+
+    u8 *dol = (u8 *)malloc(size);
 
     if(!dol)
     {
@@ -258,6 +190,7 @@ int load_usb(char slot)
     }
 
     kprintf("Receiving file...\n");
+    unsigned char *pointer = dol;
     while (size > 0xF7D8)
     {
         usb_recvbuffer_safe(channel, (void *) pointer, 0xF7D8);
@@ -266,6 +199,8 @@ int load_usb(char slot)
     }
     if(size)
         usb_recvbuffer_safe(channel, (void *) pointer, size);
+
+    *dol_ = dol;
 
 end:
     return res;
@@ -333,6 +268,9 @@ int main()
         return 0;
     }
 
+    int mram_size = SYS_GetArenaHi() - SYS_GetArenaLo();
+    kprintf("Memory available: %iB\n", mram_size);
+
     char *paths[2];
     int num_paths = 0;
 
@@ -345,18 +283,19 @@ int main()
 
     paths[num_paths++] = default_path;
 
+    u8 *dol;
     struct __argv argv;
     argv.argvMagic = ARGV_MAGIC;
 
-    if (load_usb('B')) goto load;
+    if (load_usb('B', &dol)) goto load;
 
-    if (load_fat("sdb", &__io_gcsdb, paths, num_paths, &argv)) goto load;
+    if (load_fat("sdb", &__io_gcsdb, paths, num_paths, &dol, &argv)) goto load;
 
-    if (load_usb('A')) goto load;
+    if (load_usb('A', &dol)) goto load;
 
-    if (load_fat("sda", &__io_gcsda, paths, num_paths, &argv)) goto load;
+    if (load_fat("sda", &__io_gcsda, paths, num_paths, &dol, &argv)) goto load;
 
-    if (load_fat("sd2", &__io_gcsd2, paths, num_paths, &argv)) goto load;
+    if (load_fat("sd2", &__io_gcsd2, paths, num_paths, &dol, &argv)) goto load;
 
 load:
     if (!dol)

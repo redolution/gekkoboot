@@ -66,15 +66,24 @@ void delay_exit()
     }
 }
 
-FS_RESULT read_dol_file(u8 **dol_file, const char *path)
+// 0 - Failure
+// 1 - OK/Does not exist
+int read_dol_file(u8 **dol_file, const char *path)
 {
     *dol_file = NULL;
 
     kprintf("Reading %s\n", path);
-    return fs_read_file((void **)dol_file, path);
+    FS_RESULT result = fs_read_file((void **)dol_file, path);
+    return (
+           result == FS_OK
+        || result == FS_NO_FILE
+        || result == FS_FILE_EMPTY
+    );
 }
 
-void read_cli_file(const char **cli_file, const char *dol_path)
+// 0 - Failure
+// 1 - OK/Does not exist/Skipped
+int read_cli_file(const char **cli_file, const char *dol_path)
 {
     *cli_file = NULL;
 
@@ -82,7 +91,7 @@ void read_cli_file(const char **cli_file, const char *dol_path)
     if (path_len < 5 || strncmp(dol_path + path_len - 4, ".dol", 4) != 0)
     {
         kprintf("Not reading CLI file: DOL path does not end in \".dol\"\n");
-        return;
+        return 1;
     }
 
     char path[path_len + 1];
@@ -93,37 +102,60 @@ void read_cli_file(const char **cli_file, const char *dol_path)
     path[path_len    ] = '\0';
 
     kprintf("Reading %s\n", path);
-    fs_read_file_string(cli_file, path);
+    FS_RESULT result = fs_read_file_string(cli_file, path);
+    return (
+           result == FS_OK
+        || result == FS_NO_FILE
+        || result == FS_FILE_EMPTY
+    );
 }
 
+// 0 - Device should not be used.
+// 1 - Device should be used.
 int load_shortcut_files(BOOT_PAYLOAD *payload, int shortcut_index)
 {
+    u8 *dol = NULL;
     char *path = shortcuts[shortcut_index].path;
-    FS_RESULT read_result = read_dol_file(&payload->dol, path);
-    if (read_result != FS_OK && shortcut_index != 0)
+    if (!read_dol_file(&dol, path))
+    {
+        return 1;
+    }
+    if (!dol && shortcut_index != 0)
     {
         shortcut_index = 0;
         path = shortcuts[shortcut_index].path;
-        read_result = read_dol_file(&payload->dol, path);
+        if (!read_dol_file(&dol, path))
+        {
+            return 1;
+        }
     }
-    if (read_result != FS_OK)
+    if (!dol)
     {
         return 0;
     }
 
     // Attempt to read CLI file.
     const char *cli_file;
-    read_cli_file(&cli_file, path);
+    if (!read_cli_file(&cli_file, path))
+    {
+        return 1;
+    }
 
     // Parse CLI file.
     if (cli_file)
     {
-        parse_cli_args(&payload->argv, cli_file);
+        if (!parse_cli_args(&payload->argv, cli_file))
+        {
+            return 1;
+        }
     }
 
+    payload->dol = dol;
     return 1;
 }
 
+// 0 - Device should not be used.
+// 1 - Device should be used.
 int load_fat(BOOT_PAYLOAD *payload, const char *slot_name, const DISC_INTERFACE *iface_, int shortcut_index)
 {
     int res = 0;

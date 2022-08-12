@@ -1,10 +1,10 @@
 /build
 *.dol
 *.elf
-
-ipl.rom
+*.rom
 *.gcb
 *.qbsx
 *.vgc
 *.bin
 *.gci
+/.vscode

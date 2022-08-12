@@ -66,8 +66,18 @@ void delay_exit()
     }
 }
 
-void load_parse_cli(struct __argv *argv, char *dol_path)
+FS_RESULT read_dol_file(u8 **dol_file, const char *path)
 {
+    *dol_file = NULL;
+
+    kprintf("Reading %s\n", path);
+    return fs_read_file((void **)dol_file, path);
+}
+
+void read_cli_file(const char **cli_file, const char *dol_path)
+{
+    *cli_file = NULL;
+
     size_t path_len = strlen(dol_path);
     if (path_len < 5 || strncmp(dol_path + path_len - 4, ".dol", 4) != 0)
     {
@@ -83,17 +93,10 @@ void load_parse_cli(struct __argv *argv, char *dol_path)
     path[path_len    ] = '\0';
 
     kprintf("Reading %s\n", path);
-    const char *cli;
-    FS_RESULT result = fs_read_file_string(&cli, path);
-    if (!result)
-    {
-        return;
-    }
-
-    parse_cli_args(argv, cli);
+    fs_read_file_string(cli_file, path);
 }
 
-int load_fat(BOOT_PAYLOAD *payload, const char *slot_name, const DISC_INTERFACE *iface_, char **paths, int num_paths)
+int load_fat(BOOT_PAYLOAD *payload, const char *slot_name, const DISC_INTERFACE *iface_, int shortcut_index)
 {
     int res = 0;
 
@@ -110,23 +113,32 @@ int load_fat(BOOT_PAYLOAD *payload, const char *slot_name, const DISC_INTERFACE 
     fs_get_volume_label(slot_name, name);
     kprintf("Mounted %s as %s\n", name, slot_name);
 
-    for (int i = 0; i < num_paths; ++i)
+    char *path = shortcuts[shortcut_index].path;
+    FS_RESULT read_result = read_dol_file(&payload->dol, path);
+    if (read_result != FS_OK && shortcut_index != 0)
     {
-        char *path = paths[i];
-        kprintf("Reading %s\n", path);
-        FS_RESULT read_result = fs_read_file((void **)&payload->dol, path);
-        if (read_result != FS_OK)
-        {
-            continue;
-        }
-
-        // Attempt to load and parse CLI file
-        load_parse_cli(&payload->argv, path);
-
-        res = 1;
-        break;
+        shortcut_index = 0;
+        path = shortcuts[shortcut_index].path;
+        read_result = read_dol_file(&payload->dol, path);
+    }
+    if (read_result != FS_OK)
+    {
+        goto unmount;
     }
 
+    // Attempt to read CLI file.
+    const char *cli_file;
+    read_cli_file(&cli_file, path);
+
+    // Parse CLI file.
+    if (cli_file)
+    {
+        parse_cli_args(&payload->argv, cli_file);
+    }
+
+    res = 1;
+
+unmount:
     kprintf("Unmounting %s\n", slot_name);
     fs_unmount();
 
@@ -286,30 +298,29 @@ int main()
     int mram_size = SYS_GetArenaHi() - SYS_GetArenaLo();
     kprintf("Memory available: %iB\n", mram_size);
 
-    char *paths[2];
-    int num_paths = 0;
-
-    for (int i = 1; i < NUM_SHORTCUTS; i++) {
-      if (all_buttons_held & shortcuts[i].pad_buttons) {
-        paths[num_paths++] = shortcuts[i].path;
-        break;
-      }
+    // Detect selected shortcut.
+    int shortcut_index = 0;
+    for (int i = 1; i < NUM_SHORTCUTS; i++)
+    {
+        if (all_buttons_held & shortcuts[i].pad_buttons)
+        {
+            shortcut_index = i;
+            break;
+        }
     }
-
-    paths[num_paths++] = shortcuts[0].path;
 
     BOOT_PAYLOAD payload;
     payload.argv.argvMagic = ARGV_MAGIC;
 
     if (load_usb(&payload, 'B')) goto load;
 
-    if (load_fat(&payload, "sdb", &__io_gcsdb, paths, num_paths)) goto load;
+    if (load_fat(&payload, "sdb", &__io_gcsdb, shortcut_index)) goto load;
 
     if (load_usb(&payload, 'A')) goto load;
 
-    if (load_fat(&payload, "sda", &__io_gcsda, paths, num_paths)) goto load;
+    if (load_fat(&payload, "sda", &__io_gcsda, shortcut_index)) goto load;
 
-    if (load_fat(&payload, "sd2", &__io_gcsd2, paths, num_paths)) goto load;
+    if (load_fat(&payload, "sd2", &__io_gcsd2, shortcut_index)) goto load;
 
 load:
     if (!payload.dol)

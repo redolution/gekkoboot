@@ -16,11 +16,15 @@
 #define STUB_ADDR  0x80001000
 #define STUB_STACK 0x80003000
 
-#define VERBOSE_LOGGING 0
+// Global State
+// --------------------
+int debug_enabled = false;
+u16 all_buttons_held;
+extern u8 __xfb[];
+// --------------------
 
 char *default_path = "/ipl.dol";
 
-u16 all_buttons_held;
 void scan_all_buttons_held()
 {
     PAD_ScanPads();
@@ -45,6 +49,17 @@ void wait_for_confirmation()
         cur_state = all_buttons_held & PAD_BUTTON_A;
     }
     while (last_state || !cur_state);
+}
+
+void delay_exit()
+{
+    if (debug_enabled)
+    {
+        // When debug is enabled, always wait for confirmation before exit.
+        kprintf("\nDEBUG: Press A to continue...\n");
+        wait_for_confirmation();
+        return;
+    }
 }
 
 void load_parse_cli(struct __argv *argv, char *dol_path)
@@ -215,26 +230,6 @@ end:
     return res;
 }
 
-extern u8 __xfb[];
-
-void delay_exit() {
-    // Wait while the d-pad down direction or reset button is held.
-    if (all_buttons_held & PAD_BUTTON_DOWN)
-    {
-        kprintf("(release d-pad down to continue)\n");
-    }
-    if (SYS_ResetButtonDown())
-    {
-        kprintf("(release reset button to continue)\n");
-    }
-
-    while (all_buttons_held & PAD_BUTTON_DOWN || SYS_ResetButtonDown())
-    {
-        VIDEO_WaitVSync();
-        scan_all_buttons_held();
-    }
-}
-
 int main()
 {
     VIDEO_Init();
@@ -268,6 +263,13 @@ int main()
     settime(secs_to_ticks(t));
 
     scan_all_buttons_held();
+
+    // Check if d-pad down direction or reset button is held.
+    if (all_buttons_held & PAD_BUTTON_DOWN || SYS_ResetButtonDown())
+    {
+        kprintf("DEBUG: Debug enabled.\n");
+        debug_enabled = true;
+    }
 
     if (all_buttons_held & PAD_BUTTON_LEFT || SYS_ResetButtonDown())
     {
@@ -317,25 +319,26 @@ load:
     }
 
     // Print DOL args.
-#if VERBOSE_LOGGING
-    if (argv.length > 0)
+    if (debug_enabled)
     {
-        kprintf("\nDEBUG: About to print CLI args. Press A to continue...\n");
-        wait_for_confirmation();
-        kprintf("----------\n");
-        size_t position = 0;
-        for (int i = 0; i < argv.argc; ++i)
+        if (argv.length > 0)
         {
-            kprintf("arg%i: %s\n", i, argv.commandLine + position);
-            position += strlen(argv.commandLine + position) + 1;
+            kprintf("\nDEBUG: About to print CLI args. Press A to continue...\n");
+            wait_for_confirmation();
+            kprintf("----------\n");
+            size_t position = 0;
+            for (int i = 0; i < argv.argc; ++i)
+            {
+                kprintf("arg%i: %s\n", i, argv.commandLine + position);
+                position += strlen(argv.commandLine + position) + 1;
+            }
+            kprintf("----------\n\n");
         }
-        kprintf("----------\n\n");
+        else
+        {
+            kprintf("DEBUG: No CLI args\n");
+        }
     }
-    else
-    {
-        kprintf("DEBUG: No CLI args\n");
-    }
-#endif
     
     // Prepare DOL argv.
     if (argv.length > 0)

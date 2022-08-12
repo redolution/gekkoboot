@@ -23,8 +23,6 @@ u16 all_buttons_held;
 extern u8 __xfb[];
 // --------------------
 
-char *default_path = "/ipl.dol";
-
 void scan_all_buttons_held()
 {
     PAD_ScanPads();
@@ -285,14 +283,14 @@ int main()
     char *paths[2];
     int num_paths = 0;
 
-    for (int i = 0; i < NUM_SHORTCUTS; i++) {
+    for (int i = 1; i < NUM_SHORTCUTS; i++) {
       if (all_buttons_held & shortcuts[i].pad_buttons) {
         paths[num_paths++] = shortcuts[i].path;
         break;
       }
     }
 
-    paths[num_paths++] = default_path;
+    paths[num_paths++] = shortcuts[0].path;
 
     u8 *dol;
     struct __argv argv;

@@ -23,6 +23,12 @@ u16 all_buttons_held;
 extern u8 __xfb[];
 // --------------------
 
+typedef struct
+{
+    u8 *dol;
+    struct __argv argv;
+} BOOT_PAYLOAD;
+
 void scan_all_buttons_held()
 {
     PAD_ScanPads();
@@ -87,7 +93,7 @@ void load_parse_cli(struct __argv *argv, char *dol_path)
     parse_cli_args(argv, cli);
 }
 
-int load_fat(const char *slot_name, const DISC_INTERFACE *iface_, char **paths, int num_paths, u8 **dol, struct __argv *argv)
+int load_fat(BOOT_PAYLOAD *payload, const char *slot_name, const DISC_INTERFACE *iface_, char **paths, int num_paths)
 {
     int res = 0;
 
@@ -108,14 +114,14 @@ int load_fat(const char *slot_name, const DISC_INTERFACE *iface_, char **paths, 
     {
         char *path = paths[i];
         kprintf("Reading %s\n", path);
-        FS_RESULT read_result = fs_read_file((void **)dol, path);
+        FS_RESULT read_result = fs_read_file((void **)&payload->dol, path);
         if (read_result != FS_OK)
         {
             continue;
         }
 
         // Attempt to load and parse CLI file
-        load_parse_cli(argv, path);
+        load_parse_cli(&payload->argv, path);
 
         res = 1;
         break;
@@ -145,7 +151,7 @@ unsigned int convert_int(unsigned int in)
 #define GC_READY 0x88
 #define GC_OK    0x89
 
-int load_usb(char slot, u8 **dol_)
+int load_usb(BOOT_PAYLOAD *payload, char slot)
 {
     kprintf("Trying USB Gecko in slot %c\n", slot);
 
@@ -222,7 +228,7 @@ int load_usb(char slot, u8 **dol_)
     if(size)
         usb_recvbuffer_safe(channel, (void *) pointer, size);
 
-    *dol_ = dol;
+    payload->dol = dol;
 
 end:
     return res;
@@ -292,22 +298,21 @@ int main()
 
     paths[num_paths++] = shortcuts[0].path;
 
-    u8 *dol;
-    struct __argv argv;
-    argv.argvMagic = ARGV_MAGIC;
+    BOOT_PAYLOAD payload;
+    payload.argv.argvMagic = ARGV_MAGIC;
 
-    if (load_usb('B', &dol)) goto load;
+    if (load_usb(&payload, 'B')) goto load;
 
-    if (load_fat("sdb", &__io_gcsdb, paths, num_paths, &dol, &argv)) goto load;
+    if (load_fat(&payload, "sdb", &__io_gcsdb, paths, num_paths)) goto load;
 
-    if (load_usb('A', &dol)) goto load;
+    if (load_usb(&payload, 'A')) goto load;
 
-    if (load_fat("sda", &__io_gcsda, paths, num_paths, &dol, &argv)) goto load;
+    if (load_fat(&payload, "sda", &__io_gcsda, paths, num_paths)) goto load;
 
-    if (load_fat("sd2", &__io_gcsd2, paths, num_paths, &dol, &argv)) goto load;
+    if (load_fat(&payload, "sd2", &__io_gcsd2, paths, num_paths)) goto load;
 
 load:
-    if (!dol)
+    if (!payload.dol)
     {
         // If we reach here, all attempts to load a DOL failed
         // Since we've disabled the Qoob, we wil reboot to the Nintendo IPL
@@ -319,16 +324,16 @@ load:
     // Print DOL args.
     if (debug_enabled)
     {
-        if (argv.length > 0)
+        if (payload.argv.length > 0)
         {
             kprintf("\nDEBUG: About to print CLI args. Press A to continue...\n");
             wait_for_confirmation();
             kprintf("----------\n");
             size_t position = 0;
-            for (int i = 0; i < argv.argc; ++i)
+            for (int i = 0; i < payload.argv.argc; ++i)
             {
-                kprintf("arg%i: %s\n", i, argv.commandLine + position);
-                position += strlen(argv.commandLine + position) + 1;
+                kprintf("arg%i: %s\n", i, payload.argv.commandLine + position);
+                position += strlen(payload.argv.commandLine + position) + 1;
             }
             kprintf("----------\n\n");
         }
@@ -339,9 +344,9 @@ load:
     }
     
     // Prepare DOL argv.
-    if (argv.length > 0)
+    if (payload.argv.length > 0)
     {
-        DCStoreRange(argv.commandLine, argv.length);
+        DCStoreRange(payload.argv.commandLine, payload.argv.length);
     }
 
     memcpy((void *) STUB_ADDR, stub, stub_size);
@@ -350,8 +355,8 @@ load:
     delay_exit();
 
     SYS_ResetSystem(SYS_SHUTDOWN, 0, FALSE);
-    SYS_SwitchFiber((intptr_t) dol, 0,
-                    (intptr_t) argv.commandLine, argv.length,
+    SYS_SwitchFiber((intptr_t) payload.dol, 0,
+                    (intptr_t) payload.argv.commandLine, payload.argv.length,
                     STUB_ADDR, STUB_STACK);
     return 0;
 }

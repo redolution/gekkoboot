@@ -2,6 +2,7 @@
 #include <ogc/pad.h>
 
 SHORTCUT shortcuts[NUM_SHORTCUTS] = {
+    {0,                "/ipl.dol"  },
     {PAD_BUTTON_A,     "/a.dol"    },
     {PAD_BUTTON_B,     "/b.dol"    },
     {PAD_BUTTON_X,     "/x.dol"    },

@@ -2,7 +2,7 @@
 #define INC_SHORTCUT_H
 #include <gctypes.h>
 
-#define NUM_SHORTCUTS 6
+#define NUM_SHORTCUTS 7
 
 typedef struct
 {

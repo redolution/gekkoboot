@@ -53,6 +53,7 @@ gekkoboot = executable(
     'gekkoboot',
     'source/main.c',
     'source/utils.c',
+    'source/shortcut.c',
     'source/fatfs/ff.c',
     'source/fatfs/ffsystem.c',
     'source/fatfs/ffunicode.c',

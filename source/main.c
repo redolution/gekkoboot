@@ -96,6 +96,34 @@ void read_cli_file(const char **cli_file, const char *dol_path)
     fs_read_file_string(cli_file, path);
 }
 
+int load_shortcut_files(BOOT_PAYLOAD *payload, int shortcut_index)
+{
+    char *path = shortcuts[shortcut_index].path;
+    FS_RESULT read_result = read_dol_file(&payload->dol, path);
+    if (read_result != FS_OK && shortcut_index != 0)
+    {
+        shortcut_index = 0;
+        path = shortcuts[shortcut_index].path;
+        read_result = read_dol_file(&payload->dol, path);
+    }
+    if (read_result != FS_OK)
+    {
+        return 0;
+    }
+
+    // Attempt to read CLI file.
+    const char *cli_file;
+    read_cli_file(&cli_file, path);
+
+    // Parse CLI file.
+    if (cli_file)
+    {
+        parse_cli_args(&payload->argv, cli_file);
+    }
+
+    return 1;
+}
+
 int load_fat(BOOT_PAYLOAD *payload, const char *slot_name, const DISC_INTERFACE *iface_, int shortcut_index)
 {
     int res = 0;
@@ -113,32 +141,8 @@ int load_fat(BOOT_PAYLOAD *payload, const char *slot_name, const DISC_INTERFACE 
     fs_get_volume_label(slot_name, name);
     kprintf("Mounted %s as %s\n", name, slot_name);
 
-    char *path = shortcuts[shortcut_index].path;
-    FS_RESULT read_result = read_dol_file(&payload->dol, path);
-    if (read_result != FS_OK && shortcut_index != 0)
-    {
-        shortcut_index = 0;
-        path = shortcuts[shortcut_index].path;
-        read_result = read_dol_file(&payload->dol, path);
-    }
-    if (read_result != FS_OK)
-    {
-        goto unmount;
-    }
+    res = load_shortcut_files(payload, shortcut_index);
 
-    // Attempt to read CLI file.
-    const char *cli_file;
-    read_cli_file(&cli_file, path);
-
-    // Parse CLI file.
-    if (cli_file)
-    {
-        parse_cli_args(&payload->argv, cli_file);
-    }
-
-    res = 1;
-
-unmount:
     kprintf("Unmounting %s\n", slot_name);
     fs_unmount();
 

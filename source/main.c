@@ -10,6 +10,7 @@
 #include "ffshim.h"
 #include "fatfs/ff.h"
 #include "utils.h"
+#include "shortcut.h"
 
 #include "stub.h"
 #define STUB_ADDR  0x80001000
@@ -23,20 +24,6 @@ int dol_argc = 0;
 char *dol_argv[MAX_NUM_ARGV];
 
 char *default_path = "/ipl.dol";
-struct shortcut {
-  u16 pad_buttons;
-  char *path;
-} shortcuts[] = {
-  {PAD_BUTTON_A,     "/a.dol"    },
-  {PAD_BUTTON_B,     "/b.dol"    },
-  {PAD_BUTTON_X,     "/x.dol"    },
-  {PAD_BUTTON_Y,     "/y.dol"    },
-  {PAD_TRIGGER_Z,    "/z.dol"    },
-  {PAD_BUTTON_START, "/start.dol"},
-  // NOTE: Shouldn't use L, R or Joysticks as analog inputs are calibrated on boot.
-  // Should also avoid D-Pad as it is used for special functionality.
-};
-int num_shortcuts = sizeof(shortcuts)/sizeof(shortcuts[0]);
 
 u16 all_buttons_held;
 void scan_all_buttons_held()
@@ -373,7 +360,7 @@ int main()
     char *paths[2];
     int num_paths = 0;
 
-    for (int i = 0; i < num_shortcuts; i++) {
+    for (int i = 0; i < NUM_SHORTCUTS; i++) {
       if (all_buttons_held & shortcuts[i].pad_buttons) {
         paths[num_paths++] = shortcuts[i].path;
         break;

@@ -11,6 +11,7 @@
 #include "fatfs/ff.h"
 #include "utils.h"
 #include "shortcut.h"
+#include "cli_args.h"
 
 #include "stub.h"
 #define STUB_ADDR  0x80001000
@@ -19,9 +20,6 @@
 #define VERBOSE_LOGGING 0
 
 u8 *dol = NULL;
-int dol_argc = 0;
-#define MAX_NUM_ARGV 1024
-char *dol_argv[MAX_NUM_ARGV];
 
 char *default_path = "/ipl.dol";
 
@@ -35,6 +33,21 @@ void scan_all_buttons_held()
         PAD_ButtonsHeld(PAD_CHAN2) |
         PAD_ButtonsHeld(PAD_CHAN3)
     );
+}
+
+void wait_for_confirmation()
+{
+    // Wait until the A button or reset button is pressed.
+    int cur_state = true;
+    int last_state;
+    do
+    {
+        VIDEO_WaitVSync();
+        scan_all_buttons_held();
+        last_state = cur_state;
+        cur_state = all_buttons_held & PAD_BUTTON_A;
+    }
+    while (last_state || !cur_state);
 }
 
 void dol_alloc(int size)
@@ -58,7 +71,7 @@ void dol_alloc(int size)
     }
 }
 
-void load_parse_cli(char *path)
+void load_parse_cli(struct __argv *argv, char *path)
 {
     int path_length = strlen(path);
     path[path_length - 3] = 'c';
@@ -108,47 +121,10 @@ void load_parse_cli(char *path)
       size++;
     }
 
-    // Parse CLI file
-    // https://github.com/emukidid/swiss-gc/blob/a0fa06d81360ad6d173acd42e4dd5495e268de42/cube/swiss/source/swiss.c#L1236
-    dol_argv[dol_argc] = path;
-    dol_argc++;
-
-    // First argument is at the beginning of the file
-    if (cli[0] != '\r' && cli[0] != '\n')
-    {
-        dol_argv[dol_argc] = cli;
-        dol_argc++;
-    }
-
-    // Search for the others after each newline
-    for (int i = 0; i < size; i++)
-    {
-        if (cli[i] == '\r' || cli[i] == '\n')
-        {
-            cli[i] = '\0';
-        }
-        else if (cli[i - 1] == '\0')
-        {
-            dol_argv[dol_argc] = cli + i;
-            dol_argc++;
-            if (dol_argc >= MAX_NUM_ARGV)
-            {
-                kprintf("Reached max of %i args.\n", MAX_NUM_ARGV);
-                break;
-            }
-        }
-    }
-    
-    kprintf("Found %i CLI args\n", dol_argc);
-
-    #if VERBOSE_LOGGING
-    for (int i = 0; i < dol_argc; ++i) {
-        kprintf("arg%i: %s\n", i, dol_argv[i]);
-    }
-    #endif
+    parse_cli_args(argv, cli);
 }
 
-int load_fat(const char *slot_name, const DISC_INTERFACE *iface_, char **paths, int num_paths)
+int load_fat(const char *slot_name, const DISC_INTERFACE *iface_, char **paths, int num_paths, struct __argv *argv)
 {
     int res = 0;
 
@@ -190,7 +166,7 @@ int load_fat(const char *slot_name, const DISC_INTERFACE *iface_, char **paths, 
         f_close(&file);
 
         // Attempt to load and parse CLI file
-        load_parse_cli(path);
+        load_parse_cli(argv, path);
 
         res = 1;
         break;
@@ -369,15 +345,18 @@ int main()
 
     paths[num_paths++] = default_path;
 
+    struct __argv argv;
+    argv.argvMagic = ARGV_MAGIC;
+
     if (load_usb('B')) goto load;
 
-    if (load_fat("sdb", &__io_gcsdb, paths, num_paths)) goto load;
+    if (load_fat("sdb", &__io_gcsdb, paths, num_paths, &argv)) goto load;
 
     if (load_usb('A')) goto load;
 
-    if (load_fat("sda", &__io_gcsda, paths, num_paths)) goto load;
+    if (load_fat("sda", &__io_gcsda, paths, num_paths, &argv)) goto load;
 
-    if (load_fat("sd2", &__io_gcsd2, paths, num_paths)) goto load;
+    if (load_fat("sd2", &__io_gcsd2, paths, num_paths, &argv)) goto load;
 
 load:
     if (!dol)
@@ -388,44 +367,32 @@ load:
         delay_exit();
         return 0;
     }
-    
-    struct __argv dolargs;
-    dolargs.commandLine = (char *) NULL;
-    dolargs.length = 0;
-    
-    // https://github.com/emukidid/swiss-gc/blob/f5319aab248287c847cb9468325ebcf54c993fb1/cube/swiss/source/aram/sidestep.c#L350
-    if (dol_argc)
+
+    // Print DOL args.
+#if VERBOSE_LOGGING
+    if (argv.length > 0)
     {
-        dolargs.argvMagic = ARGV_MAGIC;
-        dolargs.argc = dol_argc;
-        dolargs.length = 1;
-
-        for (int i = 0; i < dol_argc; i++)
+        kprintf("\nDEBUG: About to print CLI args. Press A to continue...\n");
+        wait_for_confirmation();
+        kprintf("----------\n");
+        size_t position = 0;
+        for (int i = 0; i < argv.argc; ++i)
         {
-            size_t arg_length = strlen(dol_argv[i]) + 1;
-            dolargs.length += arg_length;
+            kprintf("arg%i: %s\n", i, argv.commandLine + position);
+            position += strlen(argv.commandLine + position) + 1;
         }
-
-        kprintf("CLI argv size is %iB\n", dolargs.length);
-        dolargs.commandLine = (char *) malloc(dolargs.length);
-
-        if (!dolargs.commandLine)
-        {
-            kprintf("Couldn't allocate memory for CLI argv\n");
-            dolargs.length = 0;
-        }
-        else
-        {
-            unsigned int position = 0;
-            for (int i = 0; i < dol_argc; i++)
-            {
-                size_t arg_length = strlen(dol_argv[i]) + 1;
-                memcpy(dolargs.commandLine + position, dol_argv[i], arg_length);
-                position += arg_length;
-            }
-            dolargs.commandLine[dolargs.length - 1] = '\0';
-            DCStoreRange(dolargs.commandLine, dolargs.length);
-        }
+        kprintf("----------\n\n");
+    }
+    else
+    {
+        kprintf("DEBUG: No CLI args\n");
+    }
+#endif
+    
+    // Prepare DOL argv.
+    if (argv.length > 0)
+    {
+        DCStoreRange(argv.commandLine, argv.length);
     }
 
     memcpy((void *) STUB_ADDR, stub, stub_size);
@@ -435,7 +402,7 @@ load:
 
     SYS_ResetSystem(SYS_SHUTDOWN, 0, FALSE);
     SYS_SwitchFiber((intptr_t) dol, 0,
-                    (intptr_t) dolargs.commandLine, dolargs.length,
+                    (intptr_t) argv.commandLine, argv.length,
                     STUB_ADDR, STUB_STACK);
     return 0;
 }

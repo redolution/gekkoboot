@@ -23,8 +23,6 @@ int dol_argc = 0;
 #define MAX_NUM_ARGV 1024
 char *dol_argv[MAX_NUM_ARGV];
 
-char *default_path = "/ipl.dol";
-
 u16 all_buttons_held;
 void scan_all_buttons_held()
 {
@@ -360,14 +358,14 @@ int main()
     char *paths[2];
     int num_paths = 0;
 
-    for (int i = 0; i < NUM_SHORTCUTS; i++) {
+    for (int i = 1; i < NUM_SHORTCUTS; i++) {
       if (all_buttons_held & shortcuts[i].pad_buttons) {
         paths[num_paths++] = shortcuts[i].path;
         break;
       }
     }
 
-    paths[num_paths++] = default_path;
+    paths[num_paths++] = shortcuts[0].path;
 
     if (load_usb('B')) goto load;
 

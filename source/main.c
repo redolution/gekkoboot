@@ -20,7 +20,6 @@ u8 *dol = NULL;
 int dol_argc = 0;
 #define MAX_NUM_ARGV 1024
 char *dol_argv[MAX_NUM_ARGV];
-u16 all_buttons_held;
 
 char *default_path = "/ipl.dol";
 struct shortcut {
@@ -37,6 +36,18 @@ struct shortcut {
   // Should also avoid D-Pad as it is used for special functionality.
 };
 int num_shortcuts = sizeof(shortcuts)/sizeof(shortcuts[0]);
+
+u16 all_buttons_held;
+void scan_all_buttons_held()
+{
+    PAD_ScanPads();
+    all_buttons_held = (
+        PAD_ButtonsHeld(PAD_CHAN0) |
+        PAD_ButtonsHeld(PAD_CHAN1) |
+        PAD_ButtonsHeld(PAD_CHAN2) |
+        PAD_ButtonsHeld(PAD_CHAN3)
+    );
+}
 
 void dol_alloc(int size)
 {
@@ -324,13 +335,7 @@ void delay_exit() {
     while (all_buttons_held & PAD_BUTTON_DOWN || SYS_ResetButtonDown())
     {
         VIDEO_WaitVSync();
-        PAD_ScanPads();
-        all_buttons_held = (
-            PAD_ButtonsHeld(PAD_CHAN0) |
-            PAD_ButtonsHeld(PAD_CHAN1) |
-            PAD_ButtonsHeld(PAD_CHAN2) |
-            PAD_ButtonsHeld(PAD_CHAN3)
-        );
+        scan_all_buttons_held();
     }
 }
 
@@ -375,14 +380,7 @@ int main()
     EXI_Deselect(EXI_CHANNEL_0);
     EXI_Unlock(EXI_CHANNEL_0);
 
-    PAD_ScanPads();
-
-    all_buttons_held = (
-        PAD_ButtonsHeld(PAD_CHAN0) |
-        PAD_ButtonsHeld(PAD_CHAN1) |
-        PAD_ButtonsHeld(PAD_CHAN2) |
-        PAD_ButtonsHeld(PAD_CHAN3)
-    );
+    scan_all_buttons_held();
 
     if (all_buttons_held & PAD_BUTTON_LEFT || SYS_ResetButtonDown())
     {

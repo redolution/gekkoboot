@@ -6,8 +6,8 @@
 
 typedef struct
 {
-    u16 pad_buttons;
-    char *path;
+    const u16 pad_buttons;
+    const char *const path;
 } SHORTCUT;
 
 extern SHORTCUT shortcuts[NUM_SHORTCUTS];

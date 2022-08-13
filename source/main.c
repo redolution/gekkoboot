@@ -159,7 +159,7 @@ int load_shortcut_files(BOOT_PAYLOAD *payload, int shortcut_index)
     // Parse CLI file.
     if (cli_file)
     {
-        if (!parse_cli_args(&payload->argv, cli_file))
+        if (!parse_cli_args(&payload->argv, &cli_file, 1))
         {
             return 1;
         }

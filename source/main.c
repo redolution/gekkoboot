@@ -72,8 +72,12 @@ int read_dol_file(u8 **dol_file, const char *path)
 {
     *dol_file = NULL;
 
-    kprintf("Reading %s\n", path);
+    kprintf("Trying DOL file: %s\n", path);
     FS_RESULT result = fs_read_file((void **)dol_file, path);
+    if (result == FS_OK)
+    {
+        kprintf("->> DOL loaded\n");
+    }
     return (
            result == FS_OK
         || result == FS_NO_FILE
@@ -101,8 +105,12 @@ int read_cli_file(const char **cli_file, const char *dol_path)
     path[path_len - 1] = 'i';
     path[path_len    ] = '\0';
 
-    kprintf("Reading %s\n", path);
+    kprintf("Trying CLI file: %s\n", path);
     FS_RESULT result = fs_read_file_string(cli_file, path);
+    if (result == FS_OK)
+    {
+        kprintf("->> CLI file loaded\n");
+    }
     return (
            result == FS_OK
         || result == FS_NO_FILE
@@ -135,11 +143,17 @@ int load_shortcut_files(BOOT_PAYLOAD *payload, int shortcut_index)
         return 0;
     }
 
+    kprintf("Will boot DOL\n");
+
     // Attempt to read CLI file.
     const char *cli_file;
     if (!read_cli_file(&cli_file, dol_path))
     {
         return 1;
+    }
+    if (!cli_file)
+    {
+        kprintf("->> No CLI file\n");
     }
 
     // Parse CLI file.
@@ -173,7 +187,7 @@ int load_fat(BOOT_PAYLOAD *payload, const char *slot_name, const DISC_INTERFACE 
 
     char volume_label[256];
     fs_get_volume_label(slot_name, volume_label);
-    kprintf("Mounted %s as %s\n", volume_label, slot_name);
+    kprintf("Mounted \"%s\" volume from %s\n", volume_label, slot_name);
 
     // Attempt to load shortcut files.
     res = load_shortcut_files(payload, shortcut_index);
@@ -322,7 +336,7 @@ int main()
 
     if (all_buttons_held & PAD_BUTTON_LEFT || SYS_ResetButtonDown())
     {
-        kprintf("Skipped. Rebooting into original IPL...\n");
+        kprintf("Skip enabled. Rebooting into original IPL...\n\n");
         delay_exit();
         return 0;
     }
@@ -336,9 +350,14 @@ int main()
     {
         if (all_buttons_held & shortcuts[i].pad_buttons)
         {
+            kprintf("->> \"%s\" shortcut selected\n", shortcuts[i].name);
             shortcut_index = i;
             break;
         }
+    }
+    if (shortcut_index == 0)
+    {
+        kprintf("->> Using default shortcut\n");
     }
 
     // Attempt to load from each device.
@@ -353,11 +372,21 @@ int main()
         || load_fat(&payload, "sd2", &__io_gcsd2, shortcut_index)
     );
 
-    if (!res || !payload.dol_file)
+    if (!res)
     {
-        // If we reach here, all attempts to load a DOL failed
-        kprintf("No DOL loaded. Rebooting into original IPL...\n");
-        delay_exit();
+        // If we reach here, we did not find a device with any shortcut files.
+        kprintf("\nNo shortcuts found\n");
+        kprintf("Press A to reboot into onboard IPL...\n\n");
+        wait_for_confirmation();
+        return 0;
+    }
+
+    if (!payload.dol_file)
+    {
+        // If we reach here, we found a device with shortcut files but failed to load any shortcut.
+        kprintf("\nUnable to load any shortcut\n");
+        kprintf("Press A to reboot into onboard IPL...\n\n");
+        wait_for_confirmation();
         return 0;
     }
 
@@ -388,6 +417,8 @@ int main()
     {
         DCStoreRange(payload.argv.commandLine, payload.argv.length);
     }
+
+    kprintf("Booting DOL...\n");
 
     // Load stub.
     memcpy((void *) STUB_ADDR, stub, stub_size);

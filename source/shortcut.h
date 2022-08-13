@@ -6,6 +6,7 @@
 
 typedef struct
 {
+    const char *const name;
     const u16 pad_buttons;
     const char *const path;
 } SHORTCUT;

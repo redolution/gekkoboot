@@ -31,6 +31,14 @@ void handle_boot_action(const char *value, BOOT_ACTION *action)
     }
     else
     {
+        size_t len = strlen(value);
+        if (
+            (len < 5 || strcmp(value + (len - 4), ".dol") != 0) &&
+            (len < 9 || strcmp(value + (len - 8), ".dol+cli") != 0)
+        )
+        {
+            kprintf("->> !! Warning: Configured filename does not look like a DOL\n");
+        }
         action->type = BOOT_TYPE_DOL;
         action->dol_path = strdup(value);
     }

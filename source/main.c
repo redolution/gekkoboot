@@ -554,15 +554,15 @@ int main()
     {
         // If we reach here, we did not find a device with any shortcut files.
         kprintf("\nNo shortcuts found\n");
-        kprintf("Press A to reboot into onboard IPL...\n\n");
-        wait_for_confirmation();
+        kprintf("Rebooting into onboard IPL...\n\n");
+        delay_exit();
         return 0;
     }
 
     if (payload.type == BOOT_TYPE_NONE)
     {
         // If we reach here, we found a device with shortcut files but failed to load any shortcut.
-        kprintf("\nUnable to load any shortcut\n");
+        kprintf("\nUnable to load shortcut\n");
         kprintf("Press A to reboot into onboard IPL...\n\n");
         wait_for_confirmation();
         return 0;

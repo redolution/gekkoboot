@@ -5,53 +5,118 @@ A minimal GameCube IPL
 
 ## Usage
 
-iplboot will attempt to load DOLs from the following locations in order:
-- USB Gecko in Card Slot B
-- SD Gecko in Card Slot B
-- USB Gecko in Card Slot A
-- SD Gecko in Card Slot A
-- SD2SP2
+iplboot will attempt to load DOLs from the following devices in order:
+1. SD Gecko in Card Slot B
+2. SD Gecko in Card Slot A
+3. SD2SP2
+4. USB Gecko in Card Slot B
+5. USB Gecko in Card Slot A
 
-You can use button shortcuts to keep alternate software on quick access. When loading from an SD card, iplboot will look for and load different filenames depending on what buttons are being held:
+For each device, iplboot checks for the presence of the following files in order:
+1. `iplboot.ini`
+2. File matching held button (`a.dol`, `x.dol`, etc.)
+3. `ipl.dol`
+
+If no file is found, the next device is attempted. After all devices are attempted, the system will reboot into the onboard IPL (original GameCube intro and menu).
+
+Creating an `iplboot.ini` configuration file is the recommended route.
+
+**:warning: NOTE:** Be careful not to touch any of the analog controls (sticks and triggers) when powering on as this is when they are calibrated.
+
+**Something not working?** See the [troubleshooting section](#troubleshooting).
+
+### Configuration
+
+Create a file named `iplboot.ini` at the root of your SD card. This file should be formatted using INI syntax, which is basic `NAME=some value`. The following parameters are supported:
+
+**:warning: All values are case sensitive. :warning:**
+
+ Parameter        | Description
+------------------|-------------
+ `{SHORTCUT}`     | Shortcut action.
+ `{SHORTCUT}_ARG` | CLI argument passed to shortcut DOL.
+ `DEBUG`          | Set to `1` to enable debug mode.
+
+Replace `{SHORTCUT}` with one of the following: `A`, `B`, `X`, `Y`, `Z`, `START`, `DEFAULT`.
+
+Shortcut action my be one of:
+
+ Value      | Description
+------------|-------------
+ A filepath | Path to a DOL to load. All paths are relative to the device root.
+ `ONBOARD`  | Reboot into the onboard IPL (original GameCube intro and menu).
+ `USBGECKO` | Attempt to load from USB Gecko.
+
+Holding a button during boot will activate the shortcut with the matching name. If no button is held, `DEFAULT` is used (if unspecified, the `DEFAULT` action is `/ipl.dol`).
+
+Specify one `{SHORTCUT}_ARG` per CLI argument. You may specify as many as you like. Also consider using a CLI file.
+
+For example, this configuration would boot straight into Swiss by default, GBI if you held B, or the original GameCube intro if you held Z:
+
+```
+DEFAULT=swiss.dol
+Z=ONBOARD
+B=gbi.dol
+```
+
+This configuration would boot into the original GameCube intro by default, Swiss if you held Z, or GBI if you held X or Y:
+
+```
+DEFAULT=ONBOARD
+Z=swiss.dol
+X=gbi.dol
+X_ARG=--zoom=2
+Y=gbi.dol
+Y_ARG=--zoom=3
+Y_ARG=--vfilter=.5:.5:.0:.5:.0:.5
+```
+
+Comments may be included by starting the line with the `#` character. These lines will be ignored.
+
+See the [Special Features](#special-features) section for additional functionality.
+
+### Button Files
+
+**:warning: If a config file is found, this behavior does not apply.**
+
+The following buttons can be used as shortcuts to load the associated filenames when a configuration file is not present:
 
  Button Held | File Loaded
 -------------|--------------
- *None*      | `/ipl.dol`
- A           | `/a.dol`
- B           | `/b.dol`
- X           | `/x.dol`
- Y           | `/y.dol`
- Z           | `/z.dol`
- Start       | `/start.dol`
+ A           | `a.dol`
+ B           | `b.dol`
+ X           | `x.dol`
+ Y           | `y.dol`
+ Z           | `z.dol`
+ Start       | `start.dol`
 
-CLI files are also supported.
+Holding a button during boot will activate the shortcut. If no button is held, `ipl.dol` is used.
 
-If the selected shortcut file cannot be loaded, iplboot will fall back to `/ipl.dol`. If that cannot be loaded either, the next device will be searched. If all fails, iplboot will reboot to the onboard IPL (original GameCube intro and menu).
-
-Holding D-Pad Left or the reset button will skip iplboot functionality and reboot straight into the onboard IPL.
-
-For example, this configuration would boot straight into Swiss by default, or GBI if you held B, or the original GameCube intro if you held D-Pad Left:
+For example, this configuration would boot straight into Swiss by default, GBI if you held B, or the original GameCube intro if you held D-Pad Left:
 - `/ipl.dol` - Swiss
 - `/b.dol` - GBI
 
-This configuration would boot into the original GameCube intro by default, or Swiss if you held Z, or GBI if you held B:
+This configuration would boot into the original GameCube intro by default, Swiss if you held Z, or GBI if you held B:
 - `/z.dol` - Swiss
 - `/b.dol` - GBI
 
 **Pro-tip:** You can prevent files from showing in Swiss by marking them as hidden files on the SD card.
 
-If you hold multiple buttons, the highest in the table takes priority. Be careful not to touch any of the analog controls (sticks and triggers) when powering on as this is when they are calibrated.
+### Special Features
+
+CLI files are supported. They will be append after any CLI args defined in the config file.
+
+Holding D-Pad Left or the reset button will skip iplboot functionality and reboot straight into the onboard IPL.
+
+Holding D-Pad Down enables debug mode. You can hold this along with a shortcut button.
 
 iplboot also acts as a server for @emukidid's [usb-load](https://github.com/emukidid/gc-usb-load), should you want to use it for development purposes.
-
-**Something not working?** See the [troubleshooting section](#troubleshooting).
-
 
 ## Installation
 
 Download the designated appropriate file for your device from the [latest release](https://github.com/redolution/iplboot/releases/latest).
 
-Prepare your SD card by copying DOLs onto the SD card and renaming them according the table above.
+Prepare your SD card by creating a configuration file and/or copying DOLs onto the SD card according to either the [Configuration](#configuration) or [Button Files](#button-files) instructions above.
 
 ### PicoBoot
 
@@ -80,7 +145,7 @@ Use `iplboot_xz.gci` and a GameCube memory card manager such as [GCMM](https://g
 
 ## Troubleshooting
 
-iplboot displays useful diagnostic messages as it attempts to load the selected DOL. But it's so fast you may not have time to read or even see them. If you hold the down direction on the D-Pad, the messages will remain on screen until you let go.
+Enable debug mode by holding d-pad in the down direction. This will allow you to read the diagnostic messages as well as enable more verbose output. Look for warning messages about unrecognized configuration parameters, file read failures, etc.
 
 When choosing a shortcut button, beware that some software checks for buttons held at boot to alter certain behaviors. If your software behaves differently when booted through iplboot, ensure the assigned shortcut button is not used in this way. For example, it is not recommended to assign Swiss to the B button as holding B causes Swiss to disable the DVD drive.
 

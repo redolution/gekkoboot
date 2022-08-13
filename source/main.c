@@ -326,23 +326,23 @@ int load_shortcut_files(BOOT_PAYLOAD *payload, int shortcut_index)
 
 // 0 - Device should not be used.
 // 1 - Device should be used.
-int load_fat(BOOT_PAYLOAD *payload, const char *slot_name, const DISC_INTERFACE *iface, int shortcut_index)
+int load_fat(BOOT_PAYLOAD *payload, const char *device_name, const DISC_INTERFACE *iface, int shortcut_index)
 {
     int res = 0;
 
-    kprintf("Trying %s\n", slot_name);
+    kprintf("Trying %s\n", device_name);
 
     // Mount device.
     FS_RESULT result = fs_mount(iface);
     if (result != FS_OK)
     {
-        kprintf("Couldn't mount %s: %s\n", slot_name, get_fs_result_message(result));
+        kprintf("Couldn't mount %s: %s\n", device_name, get_fs_result_message(result));
         goto end;
     }
 
     char volume_label[256];
-    fs_get_volume_label(slot_name, volume_label);
-    kprintf("Mounted \"%s\" volume from %s\n", volume_label, slot_name);
+    fs_get_volume_label(device_name, volume_label);
+    kprintf("Mounted \"%s\" volume from %s\n", volume_label, device_name);
 
     // Attempt to load config or shortcut files.
     res = (
@@ -350,7 +350,7 @@ int load_fat(BOOT_PAYLOAD *payload, const char *slot_name, const DISC_INTERFACE 
         || load_shortcut_files(payload, shortcut_index)
     );
 
-    kprintf("Unmounting %s\n", slot_name);
+    kprintf("Unmounting %s\n", device_name);
     fs_unmount();
 
 end:
@@ -577,11 +577,11 @@ int main(int _argc, char **_argv)
     // Attempt to load from each device.
     int res = (
 #ifndef DOLPHIN_BUILD
-           load_fat(&payload, "sdb", &__io_gcsdb, shortcut_index)
-        || load_fat(&payload, "sda", &__io_gcsda, shortcut_index)
-        || load_fat(&payload, "sd2", &__io_gcsd2, shortcut_index)
+           load_fat(&payload, "SD Gecko in slot B", &__io_gcsdb, shortcut_index)
+        || load_fat(&payload, "SD Gecko in slot A", &__io_gcsda, shortcut_index)
+        || load_fat(&payload, "SD2SP2", &__io_gcsd2, shortcut_index)
 #else
-           load_fat(&payload, "wiisd", &__io_wiisd, shortcut_index)
+           load_fat(&payload, "Wii SD", &__io_wiisd, shortcut_index)
 #endif
     );
 
@@ -665,6 +665,11 @@ int main(int _argc, char **_argv)
     DCStoreRange((void *) STUB_ADDR, stub_size);
 
     delay_exit();
+
+    if (debug_enabled)
+    {
+        kprintf("DEBUG: Loading DOL...\n");
+    }
 
     // Boot DOL.
     SYS_ResetSystem(SYS_SHUTDOWN, 0, FALSE);

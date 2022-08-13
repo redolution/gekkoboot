@@ -11,7 +11,12 @@ ifeq ($(strip $(DEVKITPPC)),)
 $(error "Please set DEVKITPPC in your environment. export DEVKITPPC=<path to>devkitPPC")
 endif
 
+ifeq ($(DOLPHIN_BUILD),1)
+include $(DEVKITPRO)/libogc2/wii_rules
+MACHDEP	+= -DDOLPHIN_BUILD
+else
 include $(DEVKITPRO)/libogc2/gamecube_rules
+endif
 
 #---------------------------------------------------------------------------------
 # TARGET is the name of the output
@@ -33,12 +38,18 @@ MACHDEP		+= -DINI_ALLOW_MULTILINE=0 -DINI_ALLOW_BOM=0
 CFLAGS		= -g -O2 -Wall $(MACHDEP) $(INCLUDE)
 CXXFLAGS	= $(CFLAGS)
 
-LDFLAGS		= -g $(MACHDEP) -Wl,-Map,$(notdir $@).map -T$(PWD)/ipl.ld
+LDFLAGS		= -g $(MACHDEP) -Wl,-Map,$(notdir $@).map
+ifneq ($(DOLPHIN_BUILD),1)
+LDFLAGS		+= -T$(PWD)/ipl.ld
+endif
 
 #---------------------------------------------------------------------------------
 # any extra libraries we wish to link with the project
 #---------------------------------------------------------------------------------
-LIBS	:=	-logc
+LIBS	:= -logc
+ifeq ($(DOLPHIN_BUILD),1)
+LIBS	+= -lwiiuse -lfat
+endif
 
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing
@@ -115,7 +126,7 @@ endif
 
 #---------------------------------------------------------------------------------
 
-.PHONY: all dol gci qoobpro qoobsx viper dol_compressed gci_compressed $(BUILD) clean run
+.PHONY: all dol gci qoobpro qoobsx viper dol_compressed gci_compressed dolphin $(BUILD) clean run
 
 export BUILD_MAKE := @mkdir -p $(BUILD) && $(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
 
@@ -135,6 +146,8 @@ dol_compressed:
 	$(BUILD_MAKE) $(OUTPUT)_xz.dol
 gci_compressed:
 	$(BUILD_MAKE) $(OUTPUT)_xz.gci
+dolphin:
+	DOLPHIN_BUILD=1 make dol
 
 #---------------------------------------------------------------------------------
 $(BUILD): all

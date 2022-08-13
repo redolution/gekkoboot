@@ -8,6 +8,8 @@
 #include <fcntl.h>
 #include <ogc/system.h>
 #include <gccore.h>
+#include "types.h"
+#include "config.h"
 #include "shortcut.h"
 #include "filesystem.h"
 #include "cli_args.h"
@@ -22,12 +24,6 @@ int debug_enabled = false;
 u16 all_buttons_held;
 extern u8 __xfb[];
 // --------------------
-
-typedef struct
-{
-    u8 *dol_file;
-    struct __argv argv;
-} BOOT_PAYLOAD;
 
 void scan_all_buttons_held()
 {
@@ -86,6 +82,25 @@ int read_dol_file(u8 **dol_file, const char *path)
 }
 
 // 0 - Failure
+// 1 - OK/Does not exist
+int read_config_file(const char **config_file, const char *path)
+{
+    *config_file = NULL;
+
+    kprintf("Trying config file: %s\n", path);
+    FS_RESULT result = fs_read_file_string(config_file, path);
+    if (result == FS_OK)
+    {
+        kprintf("->> Config loaded\n");
+    }
+    return (
+           result == FS_OK
+        || result == FS_NO_FILE
+        || result == FS_FILE_EMPTY
+    );
+}
+
+// 0 - Failure
 // 1 - OK/Does not exist/Skipped
 int read_cli_file(const char **cli_file, const char *dol_path)
 {
@@ -116,6 +131,135 @@ int read_cli_file(const char **cli_file, const char *dol_path)
         || result == FS_NO_FILE
         || result == FS_FILE_EMPTY
     );
+}
+
+// 0 - Device should not be used.
+// 1 - Device should be used.
+int load_config(BOOT_PAYLOAD *payload, int shortcut_index)
+{
+    // Attempt to read config file from mounted FAT device.
+    const char *config_file;
+    if (!read_config_file(&config_file, default_config_path))
+    {
+        return 1;
+    }
+    if (!config_file)
+    {
+        return 0;
+    }
+
+    // Config file was found.
+    // Default to no action in case of failure.
+    int res = 1;
+    payload->type = BOOT_TYPE_NONE;
+
+    // Parse config file.
+    CONFIG config;
+    if (!parse_config(&config, config_file))
+    {
+        kprintf("->> !! Failed to parse config file\n");
+        return res;
+    }
+
+    // Set global state.
+    if (config.debug_enabled && !debug_enabled)
+    {
+        kprintf("DEBUG: Debug enabled by config.\n");
+        debug_enabled = true;
+    }
+
+    // Print config.
+    if (debug_enabled)
+    {
+        kprintf("\nDEBUG: About to print config. Press A to continue...\n");
+        wait_for_confirmation();
+        kprintf("----------\n");
+        print_config(&config);
+        kprintf("----------\n\n");
+        // kprintf("DEBUG: Done printing. Press A to continue...\n");
+        // wait_for_confirmation();
+    }
+
+    // Choose boot action.
+    if (config.shortcut_actions[shortcut_index].type == BOOT_TYPE_NONE)
+    {
+        kprintf("\"%s\" shortcut not configured\n", shortcuts[shortcut_index].name);
+        shortcut_index = 0;
+    }
+    kprintf("->> Using \"%s\" shortcut\n", shortcuts[shortcut_index].name);
+    BOOT_ACTION *action = &config.shortcut_actions[shortcut_index];
+
+    // Process boot action.
+    if (action->type == BOOT_TYPE_ONBOARD)
+    {
+        kprintf("->> Shorcut action: Reboot to onboard IPL\n");
+        payload->type = BOOT_TYPE_ONBOARD;
+        return res;
+    }
+
+    if (action->type != BOOT_TYPE_DOL)
+    {
+        // Should never happen.
+        kprintf("->> !! Internal Error: Unexpeted boot type: %i\n", action->type);
+        return res;
+    }
+
+    kprintf("->> Shorcut action: Boot DOL\n");
+
+    // Read DOL file.
+    u8 *dol_file;
+    if (!read_dol_file(&dol_file, action->dol_path) || !dol_file)
+    {
+        kprintf("->> !! Unable to read DOL\n");
+        return res;
+    }
+
+    // Attempt to read CLI file.
+    const char *cli_file;
+    if (!read_cli_file(&cli_file, action->dol_path))
+    {
+        return res;
+    }
+    if (!cli_file)
+    {
+        kprintf("->> No CLI file\n");
+    }
+
+    // Combine CLI options from config and CLI file.
+    const char **cli_options_strs = NULL;
+    int num_cli_options_strs = 0;
+    if (action->num_dol_cli_options_strs > 0)
+    {
+        cli_options_strs = action->dol_cli_options_strs;
+        num_cli_options_strs = action->num_dol_cli_options_strs;
+    }
+    if (cli_file)
+    {
+        cli_options_strs = realloc(
+            cli_options_strs,
+            (num_cli_options_strs + 1) * sizeof(const char *)
+        );
+        cli_options_strs[num_cli_options_strs++] = cli_file;
+    }
+
+    // Parse CLI options.
+    if (num_cli_options_strs > 0)
+    {
+        if (!parse_cli_args(&payload->argv, cli_options_strs, num_cli_options_strs))
+        {
+            return res;
+        }
+    }
+
+    if (cli_file)
+    {
+        free((void *)cli_file);
+    }
+
+    // Return DOL boot payload.
+    payload->type = BOOT_TYPE_DOL;
+    payload->dol_file = dol_file;
+    return res;
 }
 
 // 0 - Device should not be used.
@@ -165,6 +309,7 @@ int load_shortcut_files(BOOT_PAYLOAD *payload, int shortcut_index)
         }
     }
 
+    payload->type = BOOT_TYPE_DOL;
     payload->dol_file = dol_file;
     return 1;
 }
@@ -189,8 +334,11 @@ int load_fat(BOOT_PAYLOAD *payload, const char *slot_name, const DISC_INTERFACE 
     fs_get_volume_label(slot_name, volume_label);
     kprintf("Mounted \"%s\" volume from %s\n", volume_label, slot_name);
 
-    // Attempt to load shortcut files.
-    res = load_shortcut_files(payload, shortcut_index);
+    // Attempt to load config or shortcut files.
+    res = (
+           load_config(payload, shortcut_index)
+        || load_shortcut_files(payload, shortcut_index)
+    );
 
     kprintf("Unmounting %s\n", slot_name);
     fs_unmount();
@@ -288,6 +436,7 @@ int load_usb(BOOT_PAYLOAD *payload, char slot)
         usb_recvbuffer_safe(channel, (void *) pointer, size);
     }
 
+    payload->type = BOOT_TYPE_DOL;
     payload->dol_file = dol_file;
     return res;
 }
@@ -381,10 +530,26 @@ int main()
         return 0;
     }
 
-    if (!payload.dol_file)
+    if (payload.type == BOOT_TYPE_NONE)
     {
         // If we reach here, we found a device with shortcut files but failed to load any shortcut.
         kprintf("\nUnable to load any shortcut\n");
+        kprintf("Press A to reboot into onboard IPL...\n\n");
+        wait_for_confirmation();
+        return 0;
+    }
+
+    if (payload.type == BOOT_TYPE_ONBOARD)
+    {
+        kprintf("Rebooting into onboard IPL...\n\n");
+        delay_exit();
+        return 0;
+    }
+
+    if (payload.type != BOOT_TYPE_DOL)
+    {
+        // Should never happen.
+        kprintf("\n->> !! Internal Error: Unexpected boot type: %i\n", payload.type);
         kprintf("Press A to reboot into onboard IPL...\n\n");
         wait_for_confirmation();
         return 0;

@@ -21,7 +21,7 @@ include $(DEVKITPRO)/libogc2/gamecube_rules
 #---------------------------------------------------------------------------------
 TARGET		:=	$(notdir $(CURDIR))
 BUILD		:=	build
-SOURCES		:=	source source/fatfs
+SOURCES		:=	source source/fatfs source/inih
 DATA		:=	data
 INCLUDES	:=
 
@@ -29,6 +29,7 @@ INCLUDES	:=
 # options for code generation
 #---------------------------------------------------------------------------------
 
+MACHDEP		+= -DINI_ALLOW_MULTILINE=0 -DINI_ALLOW_BOM=0
 CFLAGS		= -g -O2 -Wall $(MACHDEP) $(INCLUDE)
 CXXFLAGS	= $(CFLAGS)
 

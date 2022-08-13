@@ -201,7 +201,12 @@ int load_config(BOOT_PAYLOAD *payload, int shortcut_index)
         payload->type = BOOT_TYPE_ONBOARD;
         return res;
     }
-
+    if (action->type == BOOT_TYPE_USBGECKO)
+    {
+        kprintf("->> Shortcut action: Use USB Gecko\n");
+        payload->type = BOOT_TYPE_USBGECKO;
+        return res;
+    }
     if (action->type != BOOT_TYPE_DOL)
     {
         // Should never happen.
@@ -546,9 +551,17 @@ int main()
 #else
            load_fat(&payload, "wiisd", &__io_wiisd, shortcut_index)
 #endif
-        || load_usb(&payload, 'B')
-        || load_usb(&payload, 'A')
     );
+
+    if (!res || payload.type == BOOT_TYPE_USBGECKO)
+    {
+        payload.type = BOOT_TYPE_NONE;
+        res = (
+               load_usb(&payload, 'B')
+            || load_usb(&payload, 'A')
+            || res
+        );
+    }
 
     if (!res)
     {

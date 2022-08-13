@@ -565,10 +565,16 @@ int main(int _argc, char **_argv)
         kprintf("->> Using default shortcut\n");
     }
 
-    // Attempt to load from each device.
+    // Init payload.
     BOOT_PAYLOAD payload;
+    payload.type = BOOT_TYPE_NONE;
+    payload.dol_file = NULL;
+    payload.argv.argc = 0;
+    payload.argv.length = 0;
+    payload.argv.commandLine = NULL;
     payload.argv.argvMagic = ARGV_MAGIC;
 
+    // Attempt to load from each device.
     int res = (
 #ifndef DOLPHIN_BUILD
            load_fat(&payload, "sdb", &__io_gcsdb, shortcut_index)

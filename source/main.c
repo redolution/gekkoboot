@@ -197,7 +197,7 @@ int load_config(BOOT_PAYLOAD *payload, int shortcut_index)
     // Process boot action.
     if (action->type == BOOT_TYPE_ONBOARD)
     {
-        kprintf("->> Shorcut action: Reboot to onboard IPL\n");
+        kprintf("->> Shortcut action: Reboot to onboard IPL\n");
         payload->type = BOOT_TYPE_ONBOARD;
         return res;
     }
@@ -209,7 +209,7 @@ int load_config(BOOT_PAYLOAD *payload, int shortcut_index)
         return res;
     }
 
-    kprintf("->> Shorcut action: Boot DOL\n");
+    kprintf("->> Shortcut action: Boot DOL\n");
 
     // Read DOL file.
     u8 *dol_file;

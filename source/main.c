@@ -600,7 +600,7 @@ int main()
     // Print DOL args.
     if (debug_enabled)
     {
-        if (payload.argv.length > 0)
+        if (payload.argv.argc > 0)
         {
             kprintf("\nDEBUG: About to print CLI args. Press A to continue...\n");
             wait_for_confirmation();

@@ -272,7 +272,7 @@ load_usb(BOOT_PAYLOAD *payload, char slot) {
 }
 
 int
-main() {
+main(int _argc, char **_argv) {
 	// GCVideo takes a while to boot up.
 	// If VIDEO_GetPreferredMode is called before it's done,
 	// it will not see the "component cable", and default to interlaced mode,
@@ -315,7 +315,26 @@ main() {
 	EXI_Unlock(EXI_CHANNEL_0);
 	// Since we've disabled the Qoob, we wil reboot to the Nintendo IPL
 
-	scan_all_buttons_held();
+	// Check argv flags.
+	int should_ask = false;
+	for (int i = 0; i < _argc; i++) {
+		if (strcmp(_argv[i], "--debug") == 0) {
+			kprintf("DEBUG: Debug enabled by flag.\n");
+			debug_enabled = true;
+		} else if (strcmp(_argv[i], "--ask") == 0) {
+			should_ask = true;
+		}
+	}
+
+	if (should_ask) {
+		kprintf("DEBUG: Press button...\n");
+		do {
+			VIDEO_WaitVSync();
+			scan_all_buttons_held();
+		} while (all_buttons_held == 0 || all_buttons_held == PAD_BUTTON_DOWN);
+	} else {
+		scan_all_buttons_held();
+	}
 
 	// Check if d-pad down direction or reset button is held.
 	if (all_buttons_held & PAD_BUTTON_DOWN || SYS_ResetButtonDown()) {

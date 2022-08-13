@@ -453,17 +453,17 @@ int load_usb(BOOT_PAYLOAD *payload, char slot)
 }
 
 #ifdef DOLPHIN_BUILD
-int _main();
-int main()
+int _main(int argc, char **argv);
+int main(int argc, char **argv)
 {
-    int res = _main();
+    int res = _main(argc, argv);
     kprintf("DOLPHIN: Exited with %i. Press A to exit...\n", res);
     wait_for_confirmation();
     return res;
 }
-int _main()
+int _main(int argc, char **argv)
 #else
-int main()
+int main(int _argc, char **_argv)
 #endif
 {
     VIDEO_Init();
@@ -500,12 +500,38 @@ int main()
     u32 t = ticks_to_secs(SYS_Time());
     settime(secs_to_ticks(t));
 
+    // Check argv flags.
+    int should_ask = 0;
+    for (int i = 0; i < _argc; i++)
+    {
+        if (strcmp(_argv[i], "--debug") == 0)
+        {
+            kprintf("DEBUG: Debug enabled by flag.\n");
+            debug_enabled = true;
+        }
+        else if (strcmp(_argv[i], "--ask") == 0)
+        {
+            should_ask = true;
+        }
+    }
+
 #ifdef DOLPHIN_BUILD
-    kprintf("DOLPHIN: Press button...\n");
-    do {VIDEO_WaitVSync(); scan_all_buttons_held();}
-    while (all_buttons_held == 0 || all_buttons_held == PAD_BUTTON_DOWN);
+    should_ask = true;
 #endif
-    scan_all_buttons_held();
+    if (should_ask)
+    {
+        kprintf("DEBUG: Press button...\n");
+        do
+        {
+            VIDEO_WaitVSync();
+            scan_all_buttons_held();
+        }
+        while (all_buttons_held == 0 || all_buttons_held == PAD_BUTTON_DOWN);
+    }
+    else
+    {
+        scan_all_buttons_held();
+    }
 
     // Check if d-pad down direction or reset button is held.
     if (all_buttons_held & PAD_BUTTON_DOWN || SYS_ResetButtonDown())

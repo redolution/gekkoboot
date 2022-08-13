@@ -181,8 +181,8 @@ int load_config(BOOT_PAYLOAD *payload, int shortcut_index)
         kprintf("----------\n");
         print_config(&config);
         kprintf("----------\n\n");
-        // kprintf("DEBUG: Done printing. Press A to continue...\n");
-        // wait_for_confirmation();
+        kprintf("DEBUG: Done printing. Press A to continue...\n");
+        wait_for_confirmation();
     }
 
     // Choose boot action.

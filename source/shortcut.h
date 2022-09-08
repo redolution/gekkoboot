@@ -5,6 +5,7 @@
 #define NUM_SHORTCUTS 7
 
 typedef struct {
+	const char *const name;
 	const u16 pad_buttons;
 	const char *path;
 } SHORTCUT;

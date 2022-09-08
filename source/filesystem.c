@@ -31,13 +31,17 @@ _fs_read_file(void **contents_, const char *path, int is_string) {
 	FIL file;
 	FRESULT result = f_open(&file, path, FA_READ);
 	if (result != FR_OK) {
-		kprintf("Failed to open file: %s\n", get_fs_result_message(result));
+		if (result == FR_NO_FILE || result == FR_NO_PATH) {
+			kprintf("File not found\n");
+			return FS_NO_FILE;
+		}
+		kprintf("->> !! Failed to open file: %s\n", get_fs_result_message(result));
 		return result;
 	}
 
 	size_t size = f_size(&file);
 	if (size <= 0) {
-		kprintf("File is empty\n");
+		kprintf("->> !! File is empty\n");
 		return FS_FILE_EMPTY;
 	}
 	kprintf("File size: %iB\n", size);
@@ -45,7 +49,7 @@ _fs_read_file(void **contents_, const char *path, int is_string) {
 	// Malloc an extra byte if we are reading as a string incase we need to add NUL character.
 	void *contents = malloc(size + (is_string ? 1 : 0));
 	if (!contents) {
-		kprintf("Couldn't allocate memory for file\n");
+		kprintf("->> !! Couldn't allocate memory for file\n");
 		return FS_NOT_ENOUGH_MEMORY;
 	}
 
@@ -53,7 +57,7 @@ _fs_read_file(void **contents_, const char *path, int is_string) {
 	UINT _;
 	result = f_read(&file, contents, size, &_);
 	if (result != FR_OK) {
-		kprintf("Failed to read file: %s\n", get_fs_result_message(result));
+		kprintf("->> !! Failed to read file: %s\n", get_fs_result_message(result));
 		return result;
 	}
 

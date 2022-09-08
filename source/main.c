@@ -547,11 +547,11 @@ int main()
     // Attempt to load from each device.
     int res = (
 #ifndef DOLPHIN_BUILD
-           load_usb(&payload, 'B')
-        || load_fat(&payload, "SD Gecko in slot B", &__io_gcsdb, shortcut_index)
-        || load_usb(&payload, 'A')
+           load_fat(&payload, "SD Gecko in slot B", &__io_gcsdb, shortcut_index)
         || load_fat(&payload, "SD Gecko in slot A", &__io_gcsda, shortcut_index)
         || load_fat(&payload, "SD2SP2", &__io_gcsd2, shortcut_index)
+        || load_usb(&payload, 'B')
+        || load_usb(&payload, 'A')
 #else
            load_fat(&payload, "Wii SD", &__io_wiisd, shortcut_index)
 #endif

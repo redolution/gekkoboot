@@ -132,7 +132,7 @@ load_shortcut_files(BOOT_PAYLOAD *payload, int shortcut_index) {
 
 	// Parse CLI file.
 	if (cli_file) {
-		int res = parse_cli_args(&payload->argv, cli_file);
+		int res = parse_cli_args(&payload->argv, &cli_file, 1);
 		free((void *) cli_file);
 		if (!res) {
 			return 1;

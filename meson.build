@@ -55,10 +55,13 @@ gekkoboot = executable(
     'source/filesystem.c',
     'source/shortcut.c',
     'source/cli_args.c',
+    'source/config.c',
+    'source/types.c',
     'source/fatfs/ff.c',
     'source/fatfs/ffsystem.c',
     'source/fatfs/ffunicode.c',
     'source/ffshim.c',
+    'source/inih/ini.c',
     version_file,
     font,
     dependencies: [

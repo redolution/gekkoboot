@@ -11,36 +11,96 @@ Supported targets:
 
 ## Usage
 
-gekkoboot will attempt to load DOLs from the following locations in order:
-- USB Gecko in Card Slot B
-- SD Gecko in Card Slot B
-- USB Gecko in Card Slot A
-- SD Gecko in Card Slot A
-- SD2SP2
+gekkoboot will attempt to load DOLs from the following devices in order:
+1. USB Gecko in Card Slot B
+2. SD Gecko in Card Slot B
+3. USB Gecko in Card Slot A
+4. SD Gecko in Card Slot A
+5. SD2SP2
 
-You can use button shortcuts to keep alternate software on quick access.
-When loading from an SD card, gekkoboot will look for and load different filenames
-depending on what buttons are being held:
+For each device, gekkoboot checks for the presence of the following files in order:
+1. `gekkoboot.ini`
+2. File matching held button (`a.dol`, `x.dol`, etc.)
+3. `ipl.dol`
+
+If no file is found, the next device is attempted. After all devices are attempted, the system will reboot into the onboard IPL (original GameCube intro and menu).
+
+Creating an `gekkoboot.ini` configuration file is the recommended route.
+
+> [!IMPORTANT]
+> Be careful not to touch any of the analog controls (sticks and triggers) when powering on as this is when they are calibrated.
+
+**Something not working?** See the [troubleshooting section](#troubleshooting).
+
+### Configuration
+
+Create a file named `gekkoboot.ini` at the root of your SD card. This file should be formatted using INI syntax, which is basic `NAME=some value`. The following parameters are supported:
+
+> [!IMPORTANT]
+> All values are case sensitive.
+
+ Parameter        | Description
+------------------|-------------
+ `{SHORTCUT}`     | Shortcut action.
+ `{SHORTCUT}_ARG` | CLI argument passed to shortcut DOL.
+ `DEBUG`          | Set to `1` to enable debug mode.
+
+Replace `{SHORTCUT}` with one of the following: `A`, `B`, `X`, `Y`, `Z`, `START`, `DEFAULT`.
+
+Shortcut action my be one of:
+
+ Value      | Description
+------------|-------------
+ A filepath | Path to a DOL to load. All paths are relative to the device root.
+ `ONBOARD`  | Reboot into the onboard IPL (original GameCube intro and menu).
+
+Holding a button during boot will activate the shortcut with the matching name. If no button is held, `DEFAULT` is used (if unspecified, the `DEFAULT` action is `/ipl.dol`).
+
+Specify one `{SHORTCUT}_ARG` per CLI argument. You may specify as many as you like. Also consider using a CLI file.
+
+For example, this configuration would boot straight into Swiss by default,
+or GBI if you held B, or the original GameCube intro if you held Z:
+
+```ini
+DEFAULT=swiss.dol
+B=gbi.dol
+Z=ONBOARD
+```
+
+This configuration would boot into the original GameCube intro by default,
+or Swiss if you held Z, or GBI if you held X or Y:
+
+```ini
+DEFAULT=ONBOARD
+Z=swiss.dol
+X=gbi.dol
+X_ARG=--zoom=2
+Y=gbi.dol
+Y_ARG=--zoom=3
+Y_ARG=--vfilter=.5:.5:.0:.5:.0:.5
+```
+
+Comments may be included by starting the line with the `#` character. These lines will be ignored.
+
+See the [Special Features](#special-features) section for additional functionality.
+
+### Button Files
+
+> [!IMPORTANT]
+> If a config file is found, this behavior does not apply.
+
+The following buttons can be used as shortcuts to load the associated filenames when a configuration file is not present:
 
  Button Held | File Loaded
 -------------|--------------
- *None*      | `/ipl.dol`
- A           | `/a.dol`
- B           | `/b.dol`
- X           | `/x.dol`
- Y           | `/y.dol`
- Z           | `/z.dol`
- Start       | `/start.dol`
+ A           | `a.dol`
+ B           | `b.dol`
+ X           | `x.dol`
+ Y           | `y.dol`
+ Z           | `z.dol`
+ Start       | `start.dol`
 
-CLI files are also supported.
-
-If the selected shortcut file cannot be loaded, gekkoboot will fall back to
-`/ipl.dol`. If that cannot be loaded either, the next device will be searched.
-If all fails, gekkoboot will reboot to the onboard IPL (original GameCube intro
-and menu).
-
-Holding D-Pad Left or the reset button will skip gekkoboot functionality and
-reboot straight into the onboard IPL.
+Holding a button during boot will activate the shortcut. If no button is held, `ipl.dol` is used.
 
 For example, this configuration would boot straight into Swiss by default,
 or GBI if you held B, or the original GameCube intro if you held D-Pad Left:
@@ -52,25 +112,27 @@ or Swiss if you held Z, or GBI if you held B:
 - `/z.dol` - Swiss
 - `/b.dol` - GBI
 
-**Pro-tip:** You can prevent files from showing in Swiss by marking them as
-hidden files on the SD card.
+> [!TIP]
+> You can prevent files from showing in Swiss by marking them as hidden files on the SD card.
 
-If you hold multiple buttons, the highest in the table takes priority.
-Be careful not to touch any of the analog controls (sticks and triggers) when
-powering on as this is when they are calibrated.
+### Special Features
+
+CLI files are supported. They will be append after any CLI args defined in the config file.
+
+Holding D-Pad Left or the reset button will skip gekkoboot functionality and
+reboot straight into the onboard IPL.
+
+Holding D-Pad Down enables debug mode. You can hold this along with a shortcut button.
 
 gekkoboot also acts as a server for @emukidid's [usb-load](https://github.com/emukidid/gc-usb-load),
 should you want to use it for development purposes.
-
-**Something not working?** See the [troubleshooting section](#troubleshooting).
-
 
 ## Installation
 
 Download and extract the [latest release].
 
-Prepare your SD card by copying DOLs onto the SD card and renaming them
-according the table above.
+Prepare your SD card by creating a configuration file and/or copying DOLs onto the SD card and renaming them
+according to either the [Configuration](#configuration) or [Button Files](#button-files) instructions above.
 
 ### PicoBoot
 
@@ -154,6 +216,8 @@ It will be saved as `boot.dol` and can be used in conjunction with the various
 ## Troubleshooting
 
 Enable debug mode by holding d-pad in the down direction. This will allow you to read the diagnostic messages as well as enable more verbose output. Look for warning messages about unrecognized configuration parameters, file read failures, etc.
+
+If multiple shortcut buttons are held, the highest in the table takes priority.
 
 When choosing a shortcut button, beware that some software checks for buttons
 held at boot to alter certain behaviors.

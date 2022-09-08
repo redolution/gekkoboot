@@ -190,7 +190,7 @@ void parse_cli_file(char **_dol_argv, int *_dol_argc, char *cli, int size)
     *_dol_argc = dol_argc;
 }
 
-int load_fat(BOOT_PAYLOAD *payload, const char *slot_name, const DISC_INTERFACE *iface_, char **paths, int num_paths)
+int load_fat(BOOT_PAYLOAD *payload, const char *slot_name, const DISC_INTERFACE *iface_, int shortcut_index)
 {
     int res = 0;
 
@@ -209,30 +209,33 @@ int load_fat(BOOT_PAYLOAD *payload, const char *slot_name, const DISC_INTERFACE 
     f_getlabel(slot_name, name, NULL);
     kprintf("Mounted %s as %s\n", name, slot_name);
 
-    for (int i = 0; i < num_paths; ++i)
+    char *path = shortcuts[shortcut_index].path;
+    read_dol_file(&payload->dol, path);
+    if (!payload->dol && shortcut_index != 0)
     {
-        char *path = paths[i];
+        shortcut_index = 0;
+        path = shortcuts[shortcut_index].path;
         read_dol_file(&payload->dol, path);
-        if (!payload->dol)
-        {
-            continue;
-        }
-
-        // Attempt to load and parse CLI file
-        char *cli;
-        int cli_size;
-        read_cli_file(&cli, &cli_size, path);
-
-        // Parse CLI file.
-        if (cli)
-        {
-            parse_cli_file(payload->dol_argv, &payload->dol_argc, cli, cli_size);
-        }
-
-        res = 1;
-        break;
+    }
+    if (!payload->dol)
+    {
+        goto unmount;
     }
 
+    // Attempt to load and parse CLI file
+    char *cli;
+    int cli_size;
+    read_cli_file(&cli, &cli_size, path);
+
+    // Parse CLI file.
+    if (cli)
+    {
+        parse_cli_file(payload->dol_argv, &payload->dol_argc, cli, cli_size);
+    }
+
+    res = 1;
+
+unmount:
     kprintf("Unmounting %s\n", slot_name);
     iface->shutdown();
     iface = NULL;
@@ -394,17 +397,16 @@ int main()
         return 0;
     }
 
-    char *paths[2];
-    int num_paths = 0;
-
-    for (int i = 1; i < NUM_SHORTCUTS; i++) {
-      if (all_buttons_held & shortcuts[i].pad_buttons) {
-        paths[num_paths++] = shortcuts[i].path;
-        break;
-      }
+    // Detect selected shortcut.
+    int shortcut_index = 0;
+    for (int i = 1; i < NUM_SHORTCUTS; i++)
+    {
+        if (all_buttons_held & shortcuts[i].pad_buttons)
+        {
+            shortcut_index = i;
+            break;
+        }
     }
-
-    paths[num_paths++] = shortcuts[0].path;
 
     // Init payload.
     BOOT_PAYLOAD payload;
@@ -414,13 +416,13 @@ int main()
     // Attempt to load from each device.
     if (load_usb(&payload, 'B')) goto load;
 
-    if (load_fat(&payload, "sdb", &__io_gcsdb, paths, num_paths)) goto load;
+    if (load_fat(&payload, "sdb", &__io_gcsdb, shortcut_index)) goto load;
 
     if (load_usb(&payload, 'A')) goto load;
 
-    if (load_fat(&payload, "sda", &__io_gcsda, paths, num_paths)) goto load;
+    if (load_fat(&payload, "sda", &__io_gcsda, shortcut_index)) goto load;
 
-    if (load_fat(&payload, "sd2", &__io_gcsd2, paths, num_paths)) goto load;
+    if (load_fat(&payload, "sd2", &__io_gcsd2, shortcut_index)) goto load;
 
 load:
     if (!payload.dol)

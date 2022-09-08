@@ -5,8 +5,8 @@
 #define NUM_SHORTCUTS 7
 
 typedef struct {
-	u16 pad_buttons;
-	char *path;
+	const u16 pad_buttons;
+	const char *path;
 } SHORTCUT;
 
 extern SHORTCUT shortcuts[NUM_SHORTCUTS];

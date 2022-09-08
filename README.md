@@ -53,6 +53,7 @@ Shortcut action my be one of:
 ------------|-------------
  A filepath | Path to a DOL to load. All paths are relative to the device root.
  `ONBOARD`  | Reboot into the onboard IPL (original GameCube intro and menu).
+ `USBGECKO` | Attempt to load from USB Gecko.
 
 Holding a button during boot will activate the shortcut with the matching name. If no button is held, `DEFAULT` is used (if unspecified, the `DEFAULT` action is `/ipl.dol`).
 

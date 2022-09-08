@@ -1,10 +1,11 @@
 #include "types.h"
 
-#define NUM_BOOT_TYPE_NAMES 3
+#define NUM_BOOT_TYPE_NAMES 4
 const char *boot_type_names[NUM_BOOT_TYPE_NAMES] = {
-	/*BOOT_TYPE_NONE    (0)*/ "NONE",
-	/*BOOT_TYPE_DOL     (1)*/ "DOL",
-	/*BOOT_TYPE_ONBOARD (2)*/ "ONBOARD",
+	/*BOOT_TYPE_NONE     (0)*/ "NONE",
+	/*BOOT_TYPE_DOL      (1)*/ "DOL",
+	/*BOOT_TYPE_ONBOARD  (2)*/ "ONBOARD",
+	/*BOOT_TYPE_USBGECKO (3)*/ "USBGECKO",
 };
 
 const char *

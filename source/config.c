@@ -26,6 +26,8 @@ void
 handle_boot_action(const char *value, BOOT_ACTION *action) {
 	if (strcmp(value, "ONBOARD") == 0) {
 		action->type = BOOT_TYPE_ONBOARD;
+	} else if (strcmp(value, "USBGECKO") == 0) {
+		action->type = BOOT_TYPE_USBGECKO;
 	} else {
 		action->type = BOOT_TYPE_DOL;
 		action->dol_path = strdup(value);

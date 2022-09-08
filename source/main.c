@@ -165,7 +165,11 @@ load_config(BOOT_PAYLOAD *payload, int shortcut_index) {
 		payload->type = BOOT_TYPE_ONBOARD;
 		return res;
 	}
-
+	if (action->type == BOOT_TYPE_USBGECKO) {
+		kprintf("->> Shortcut action: Use USB Gecko\n");
+		payload->type = BOOT_TYPE_USBGECKO;
+		return res;
+	}
 	if (action->type != BOOT_TYPE_DOL) {
 		// Should never happen.
 		kprintf("->> !! Internal Error: Unexpeted boot type: %i\n", action->type);
@@ -502,11 +506,14 @@ main(int _argc, char **_argv) {
 
 	// Attempt to load from each device.
 	int res =
-		(load_usb(&payload, 'B')
-	         || load_fat(&payload, "SD Gecko in slot B", &__io_gcsdb, shortcut_index)
-	         || load_usb(&payload, 'A')
+		(load_fat(&payload, "SD Gecko in slot B", &__io_gcsdb, shortcut_index)
 	         || load_fat(&payload, "SD Gecko in slot A", &__io_gcsda, shortcut_index)
 	         || load_fat(&payload, "SD2SP2", &__io_gcsd2, shortcut_index));
+
+	if (!res || payload.type == BOOT_TYPE_USBGECKO) {
+		payload.type = BOOT_TYPE_NONE;
+		res = (load_usb(&payload, 'B') || load_usb(&payload, 'A') || res);
+	}
 
 	if (!res) {
 		// If we reach here, we did not find a device with any shortcut files.

@@ -5,7 +5,8 @@
 typedef enum {
 	BOOT_TYPE_NONE = 0,
 	BOOT_TYPE_DOL,
-	BOOT_TYPE_ONBOARD
+	BOOT_TYPE_ONBOARD,
+	BOOT_TYPE_USBGECKO,
 	// Changes to this enum should also be made to boot_type_names in types.c
 } BOOT_TYPE;
 

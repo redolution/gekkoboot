@@ -72,19 +72,28 @@ void delay_exit()
     }
 }
 
-void read_dol_file(u8 **dol_file, const char *path)
+// 0 - Failure
+// 1 - OK/Does not exist
+int read_dol_file(u8 **dol_file, const char *path)
 {
     *dol_file = NULL;
 
     kprintf("Trying DOL file: %s\n", path);
-    fs_read_file((void **)dol_file, path);
-    if (dol_file)
+    FS_RESULT result = fs_read_file((void **)dol_file, path);
+    if (result == FS_OK)
     {
         kprintf("->> DOL loaded\n");
     }
+    return (
+           result == FS_OK
+        || result == FS_NO_FILE
+        || result == FS_FILE_EMPTY
+    );
 }
 
-void read_cli_file(const char **cli_file, const char *dol_path)
+// 0 - Failure
+// 1 - OK/Does not exist/Skipped
+int read_cli_file(const char **cli_file, const char *dol_path)
 {
     *cli_file = NULL;
 
@@ -92,7 +101,7 @@ void read_cli_file(const char **cli_file, const char *dol_path)
     if (path_len < 5 || strncmp(dol_path + path_len - 4, ".dol", 4) != 0)
     {
         kprintf("Not reading CLI file: DOL path does not end in \".dol\"\n");
-        return;
+        return 1;
     }
 
     char path[path_len + 1];
@@ -103,11 +112,16 @@ void read_cli_file(const char **cli_file, const char *dol_path)
     path[path_len    ] = '\0';
 
     kprintf("Trying CLI file: %s\n", path);
-    fs_read_file_string(cli_file, path);
-    if (cli_file)
+    FS_RESULT result = fs_read_file_string(cli_file, path);
+    if (result == FS_OK)
     {
         kprintf("->> CLI file loaded\n");
     }
+    return (
+           result == FS_OK
+        || result == FS_NO_FILE
+        || result == FS_FILE_EMPTY
+    );
 }
 
 // 0 - Device should not be used.
@@ -117,12 +131,18 @@ int load_shortcut_files(BOOT_PAYLOAD *payload, int shortcut_index)
     // Attempt to read shortcut paths from from mounted FAT device.
     u8 *dol_file = NULL;
     const char *dol_path = shortcuts[shortcut_index].path;
-    read_dol_file(&dol_file, dol_path);
+    if (!read_dol_file(&dol_file, dol_path))
+    {
+        return 1;
+    }
     if (!dol_file && shortcut_index != 0)
     {
         shortcut_index = 0;
         dol_path = shortcuts[shortcut_index].path;
-        read_dol_file(&dol_file, dol_path);
+        if (!read_dol_file(&dol_file, dol_path))
+        {
+            return 1;
+        }
     }
     if (!dol_file)
     {
@@ -133,7 +153,10 @@ int load_shortcut_files(BOOT_PAYLOAD *payload, int shortcut_index)
 
     // Attempt to read CLI file.
     const char *cli_file;
-    read_cli_file(&cli_file, dol_path);
+    if (!read_cli_file(&cli_file, dol_path))
+    {
+        return 1;
+    }
     if (!cli_file)
     {
         kprintf("->> No CLI file\n");
@@ -142,8 +165,12 @@ int load_shortcut_files(BOOT_PAYLOAD *payload, int shortcut_index)
     // Parse CLI file.
     if (cli_file)
     {
-        parse_cli_args(&payload->argv, cli_file);
+        int res = parse_cli_args(&payload->argv, cli_file);
         free((void *)cli_file);
+        if (!res)
+        {
+            return 1;
+        }
     }
 
     payload->dol_file = dol_file;
@@ -358,11 +385,21 @@ int main()
         || load_fat(&payload, "SD2SP2", &__io_gcsd2, shortcut_index)
     );
 
-    if (!res || !payload.dol_file)
+    if (!res)
     {
-        // If we reach here, all attempts to load a DOL failed
-        kprintf("No DOL loaded. Rebooting into original IPL...\n");
-        delay_exit();
+        // If we reach here, we did not find a device with any shortcut files.
+        kprintf("\nNo shortcuts found\n");
+        kprintf("Press A to reboot into onboard IPL...\n\n");
+        wait_for_confirmation();
+        return 0;
+    }
+
+    if (!payload.dol_file)
+    {
+        // If we reach here, we found a device with shortcut files but failed to load any shortcut.
+        kprintf("\nUnable to load any shortcut\n");
+        kprintf("Press A to reboot into onboard IPL...\n\n");
+        wait_for_confirmation();
         return 0;
     }
 

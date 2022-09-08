@@ -60,12 +60,19 @@ void read_cli_file(const char **cli_file, const char *dol_path)
 {
     *cli_file = NULL;
 
-    int path_length = strlen(dol_path);
-    char path[path_length + 1];
-    strcpy(path, dol_path);
-    path[path_length - 3] = 'c';
-    path[path_length - 2] = 'l';
-    path[path_length - 1] = 'i';
+    size_t path_len = strlen(dol_path);
+    if (path_len < 5 || strncmp(dol_path + path_len - 4, ".dol", 4) != 0)
+    {
+        kprintf("Not reading CLI file: DOL path does not end in \".dol\"\n");
+        return;
+    }
+
+    char path[path_len + 1];
+    memcpy(path, dol_path, path_len - 3);
+    path[path_len - 3] = 'c';
+    path[path_len - 2] = 'l';
+    path[path_len - 1] = 'i';
+    path[path_len    ] = '\0';
 
     kprintf("Reading %s\n", path);
     fs_read_file_string(cli_file, path);

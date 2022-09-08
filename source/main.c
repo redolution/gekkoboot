@@ -56,7 +56,7 @@ void read_dol_file(u8 **dol_file, const char *path)
     fs_read_file((void **)dol_file, path);
 }
 
-void read_cli_file(char **cli_file, const char *dol_path)
+void read_cli_file(const char **cli_file, const char *dol_path)
 {
     *cli_file = NULL;
 
@@ -68,7 +68,7 @@ void read_cli_file(char **cli_file, const char *dol_path)
     path[path_length - 1] = 'i';
 
     kprintf("Reading %s\n", path);
-    fs_read_file_string((const char **)cli_file, path);
+    fs_read_file_string(cli_file, path);
 }
 
 // 0 - Device should not be used.
@@ -91,7 +91,7 @@ int load_shortcut_files(BOOT_PAYLOAD *payload, int shortcut_index)
     }
 
     // Attempt to read CLI file.
-    char *cli_file;
+    const char *cli_file;
     read_cli_file(&cli_file, dol_path);
 
     // Parse CLI file.

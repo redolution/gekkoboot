@@ -1,1 +1,2 @@
 option('full_rom', type: 'feature', description: 'Whether to enable full ROM builds (Qoob Pro support)')
+option('emu_build', type: 'boolean', value: false)

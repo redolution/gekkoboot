@@ -1,4 +1,8 @@
 #include "filesystem.h"
+
+#ifdef EMU_BUILD
+#include "filesystem_emu.c"
+#else
 #include "fatfs/ff.h"
 #include "ffshim.h"
 #include <ogc/system.h>
@@ -72,6 +76,7 @@ _fs_read_file(void **contents_, const char *path, int is_string) {
 	*contents_ = contents;
 	return FS_OK;
 }
+#endif
 
 FS_RESULT
 fs_read_file(void **contents, const char *path) {

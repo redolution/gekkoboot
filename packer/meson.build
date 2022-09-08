@@ -19,7 +19,7 @@ packer_stub = static_library(
     link_with: packer_crt,
     dependencies: [
         # For the headers
-        libogc_deps['ogc'].partial_dependency(
+        libogc_deps_dic['ogc'].partial_dependency(
             compile_args: true,
             sources: true,
         ),

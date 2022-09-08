@@ -9,19 +9,24 @@
 #include <malloc.h>
 #include <ogc/lwp_watchdog.h>
 #include <ogc/system.h>
-#include <sdcard/gcsd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
+#ifndef EMU_BUILD
 #include "stub.h"
+#include <sdcard/gcsd.h>
+extern u8 __xfb[];
+#else
+#include <sdcard/wiisd_io.h>
+static void *__xfb = NULL;
+#endif
 
 // Global State
 // --------------------
 int debug_enabled = false;
 u16 all_buttons_held;
-extern u8 __xfb[];
 // --------------------
 
 void
@@ -402,8 +407,14 @@ load_usb(BOOT_PAYLOAD *payload, char slot) {
 	return res;
 }
 
+#ifdef EMU_BUILD
+int
+main_capture(int _argc, char **_argv) {
+#else
 int
 main(int _argc, char **_argv) {
+#endif
+#ifndef EMU_BUILD
 	// GCVideo takes a while to boot up.
 	// If VIDEO_GetPreferredMode is called before it's done,
 	// it will not see the "component cable", and default to interlaced mode,
@@ -417,11 +428,15 @@ main(int _argc, char **_argv) {
 			}
 		}
 	}
+#endif
 
 	VIDEO_Init();
 	PAD_Init();
 	GXRModeObj *rmode = VIDEO_GetPreferredMode(NULL);
 	VIDEO_Configure(rmode);
+#ifdef EMU_BUILD
+	__xfb = MEM_K0_TO_K1(SYS_AllocateFramebuffer(rmode));
+#endif
 	VIDEO_SetNextFramebuffer(__xfb);
 	VIDEO_SetBlack(FALSE);
 	VIDEO_Flush();
@@ -432,6 +447,9 @@ main(int _argc, char **_argv) {
 	);
 
 	kprintf("\n\ngekkoboot %s\n", version);
+#ifdef EMU_BUILD
+	kprintf("EMU_BUILD\n");
+#endif
 
 	// Disable Qoob
 	u32 val = 6 << 24;
@@ -457,6 +475,11 @@ main(int _argc, char **_argv) {
 		}
 	}
 
+#ifdef EMU_BUILD
+	kprintf("DEBUG: Debug enabled by EMU_BUILD.\n");
+	debug_enabled = true;
+	should_ask = true;
+#endif
 	if (should_ask) {
 		kprintf("DEBUG: Press button...\n");
 		do {
@@ -504,6 +527,7 @@ main(int _argc, char **_argv) {
 	payload.argv.commandLine = NULL;
 	payload.argv.argvMagic = ARGV_MAGIC;
 
+#ifndef EMU_BUILD
 	// Attempt to load from each device.
 	int res =
 		(load_fat(&payload, "SD Gecko in slot B", &__io_gcsdb, shortcut_index)
@@ -514,6 +538,9 @@ main(int _argc, char **_argv) {
 		payload.type = BOOT_TYPE_NONE;
 		res = (load_usb(&payload, 'B') || load_usb(&payload, 'A') || res);
 	}
+#else
+	int res = load_fat(&payload, "Wii SD", &__io_wiisd, shortcut_index);
+#endif
 
 	if (!res) {
 		// If we reach here, we did not find a device with any shortcut files.
@@ -570,6 +597,7 @@ main(int _argc, char **_argv) {
 
 	kprintf("Booting DOL...\n");
 
+#ifndef EMU_BUILD
 	// Load stub.
 	memcpy((void *) STUB_ADDR, stub, (size_t) stub_size);
 	DCStoreRange((void *) STUB_ADDR, (u32) stub_size);
@@ -593,4 +621,18 @@ main(int _argc, char **_argv) {
 
 	// Will never reach here.
 	return 0;
+#else
+	kprintf("EMU_BUILD: Success!\n");
+	return 0;
+#endif
 }
+
+#ifdef EMU_BUILD
+int
+main(int _argc, char **_argv) {
+	int res = main_capture(_argc, _argv);
+	kprintf("EMU_BUILD: Exited with %i. Press A to exit...\n", res);
+	wait_for_confirmation();
+	return res;
+}
+#endif

@@ -3,6 +3,6 @@
 #include <gctypes.h>
 
 int
-parse_cli_args(struct __argv *argv, char *cli_option_str);
+parse_cli_args(struct __argv *argv, const char *cli_option_str);
 
 #endif

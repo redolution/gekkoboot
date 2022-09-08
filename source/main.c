@@ -1,9 +1,8 @@
-#include "fatfs/ff.h"
-#include "ffshim.h"
+#include "filesystem.h"
 #include "shortcut.h"
-#include "utils.h"
 #include "version.h"
 #include <fcntl.h>
+#include <gccore.h>
 #include <malloc.h>
 #include <ogc/lwp_watchdog.h>
 #include <ogc/system.h>
@@ -35,55 +34,16 @@ scan_all_buttons_held() {
 }
 
 void
-dol_alloc(u8 **_dol, int size) {
-	int mram_size = (SYS_GetArenaHi() - SYS_GetArenaLo());
-	kprintf("Memory available: %iB\n", mram_size);
-
-	kprintf("DOL size is %iB\n", size);
-
-	if (size <= 0) {
-		kprintf("Empty DOL\n");
-		return;
-	}
-
-	u8 *dol = (u8 *) memalign(32, size);
-
-	if (!dol) {
-		kprintf("Couldn't allocate memory\n");
-	}
-
-	*_dol = dol;
-}
-
-void
 read_dol_file(u8 **_dol, char *path) {
 	*_dol = NULL;
 
 	kprintf("Reading %s\n", path);
-	FIL file;
-	FRESULT open_result = f_open(&file, path, FA_READ);
-	if (open_result != FR_OK) {
-		kprintf("Failed to open file: %s\n", get_fresult_message(open_result));
-		return;
-	}
-
-	size_t size = f_size(&file);
-	u8 *dol;
-	dol_alloc(&dol, size);
-	if (!dol) {
-		return;
-	}
-	UINT _;
-	f_read(&file, dol, size, &_);
-	f_close(&file);
-
-	*_dol = dol;
+	fs_read_file((void **) _dol, path);
 }
 
 void
-read_cli_file(char **_cli, int *_size, char *path) {
+read_cli_file(char **_cli, char *path) {
 	*_cli = NULL;
-	*_size = 0;
 
 	int path_length = strlen(path);
 	path[path_length - 3] = 'c';
@@ -91,43 +51,7 @@ read_cli_file(char **_cli, int *_size, char *path) {
 	path[path_length - 1] = 'i';
 
 	kprintf("Reading %s\n", path);
-	FIL file;
-	FRESULT result = f_open(&file, path, FA_READ);
-	if (result != FR_OK) {
-		if (result == FR_NO_FILE) {
-			kprintf("CLI file not found\n");
-		} else {
-			kprintf("Failed to open CLI file: %s\n", get_fresult_message(result));
-		}
-		return;
-	}
-
-	size_t size = f_size(&file);
-	kprintf("CLI file size is %iB\n", size);
-
-	if (size <= 0) {
-		kprintf("Empty CLI file\n");
-		return;
-	}
-
-	char *cli = (char *) malloc(size + 1);
-
-	if (!cli) {
-		kprintf("Couldn't allocate memory for CLI file\n");
-		return;
-	}
-
-	UINT _;
-	f_read(&file, cli, size, &_);
-	f_close(&file);
-
-	if (cli[size - 1] != '\0') {
-		cli[size] = '\0';
-		size++;
-	}
-
-	*_cli = cli;
-	*_size = size;
+	fs_read_file_string((const char **) _cli, path);
 }
 
 void
@@ -183,12 +107,11 @@ load_shortcut_files(BOOT_PAYLOAD *payload, int shortcut_index) {
 
 	// Attempt to load and parse CLI file
 	char *cli;
-	int cli_size;
-	read_cli_file(&cli, &cli_size, path);
+	read_cli_file(&cli, path);
 
 	// Parse CLI file.
 	if (cli) {
-		parse_cli_file(payload->dol_argv, &payload->dol_argc, cli, cli_size);
+		parse_cli_file(payload->dol_argv, &payload->dol_argc, cli, strlen(cli));
 	}
 
 	return 1;
@@ -205,23 +128,20 @@ load_fat(
 
 	kprintf("Trying %s\n", slot_name);
 
-	FATFS fs;
-	iface = iface_;
-	FRESULT mount_result = f_mount(&fs, "", 1);
-	if (mount_result != FR_OK) {
-		kprintf("Couldn't mount %s: %s\n", slot_name, get_fresult_message(mount_result));
+	FS_RESULT mount_result = fs_mount(iface_);
+	if (mount_result != FS_OK) {
+		kprintf("Couldn't mount %s: %s\n", slot_name, get_fs_result_message(mount_result));
 		goto end;
 	}
 
 	char name[256];
-	f_getlabel(slot_name, name, NULL);
+	fs_get_volume_label(slot_name, name);
 	kprintf("Mounted %s as %s\n", name, slot_name);
 
 	res = load_shortcut_files(payload, shortcut_index);
 
 	kprintf("Unmounting %s\n", slot_name);
-	iface->shutdown();
-	iface = NULL;
+	fs_unmount();
 
 end:
 	return res;
@@ -302,15 +222,21 @@ load_usb(BOOT_PAYLOAD *payload, char slot) {
 	usb_recvbuffer_safe(channel, &size, 4);
 	size = convert_int(size);
 
-	dol_alloc(&payload->dol, size);
-	unsigned char *pointer = payload->dol;
+	if (size <= 0) {
+		kprintf("DOL is empty\n");
+		return res;
+	}
+	kprintf("DOL size is %iB\n", size);
 
-	if (!payload->dol) {
+	u8 *dol = (u8 *) malloc(size);
+
+	if (!dol) {
 		res = 0;
 		goto end;
 	}
 
 	kprintf("Receiving file...\n");
+	unsigned char *pointer = dol;
 	while (size > 0xF7D8) {
 		usb_recvbuffer_safe(channel, (void *) pointer, 0xF7D8);
 		size -= 0xF7D8;
@@ -319,6 +245,8 @@ load_usb(BOOT_PAYLOAD *payload, char slot) {
 	if (size) {
 		usb_recvbuffer_safe(channel, (void *) pointer, size);
 	}
+
+	payload->dol = dol;
 
 end:
 	return res;
@@ -393,6 +321,9 @@ main() {
 		delay_exit();
 		return 0;
 	}
+
+	int mram_size = SYS_GetArenaHi() - SYS_GetArenaLo();
+	kprintf("Memory available: %iB\n", mram_size);
 
 	// Detect selected shortcut.
 	int shortcut_index = 0;

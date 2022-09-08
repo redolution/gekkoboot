@@ -52,7 +52,7 @@ font = custom_target(
 gekkoboot = executable(
     'gekkoboot',
     'source/main.c',
-    'source/utils.c',
+    'source/filesystem.c',
     'source/shortcut.c',
     'source/cli_args.c',
     'source/fatfs/ff.c',

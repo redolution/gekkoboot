@@ -15,10 +15,9 @@
 
 #include "stub.h"
 
-#define VERBOSE_LOGGING 0
-
 // Global State
 // --------------------
+int debug_enabled = false;
 u16 all_buttons_held;
 extern u8 __xfb[];
 // --------------------
@@ -34,6 +33,28 @@ scan_all_buttons_held() {
 	all_buttons_held =
 		(PAD_ButtonsHeld(PAD_CHAN0) | PAD_ButtonsHeld(PAD_CHAN1)
 	         | PAD_ButtonsHeld(PAD_CHAN2) | PAD_ButtonsHeld(PAD_CHAN3));
+}
+
+void
+wait_for_confirmation() {
+	// Wait until the A button or reset button is pressed.
+	int cur_state = true;
+	int last_state;
+	do {
+		VIDEO_WaitVSync();
+		scan_all_buttons_held();
+		last_state = cur_state;
+		cur_state = all_buttons_held & PAD_BUTTON_A;
+	} while (last_state || !cur_state);
+}
+
+void
+delay_exit() {
+	if (debug_enabled) {
+		// When debug is enabled, always wait for confirmation before exit.
+		kprintf("\nDEBUG: Press A to continue...\n");
+		wait_for_confirmation();
+	}
 }
 
 void
@@ -224,22 +245,6 @@ load_usb(BOOT_PAYLOAD *payload, char slot) {
 	return res;
 }
 
-void
-delay_exit() {
-	// Wait while the d-pad down direction or reset button is held.
-	if (all_buttons_held & PAD_BUTTON_DOWN) {
-		kprintf("(release d-pad down to continue)\n");
-	}
-	if (SYS_ResetButtonDown()) {
-		kprintf("(release reset button to continue)\n");
-	}
-
-	while (all_buttons_held & PAD_BUTTON_DOWN || SYS_ResetButtonDown()) {
-		VIDEO_WaitVSync();
-		scan_all_buttons_held();
-	}
-}
-
 int
 main() {
 	// GCVideo takes a while to boot up.
@@ -286,6 +291,12 @@ main() {
 
 	scan_all_buttons_held();
 
+	// Check if d-pad down direction or reset button is held.
+	if (all_buttons_held & PAD_BUTTON_DOWN || SYS_ResetButtonDown()) {
+		kprintf("DEBUG: Debug enabled.\n");
+		debug_enabled = true;
+	}
+
 	if (all_buttons_held & PAD_BUTTON_LEFT || SYS_ResetButtonDown()) {
 		kprintf("Skipped. Rebooting into original IPL...\n");
 		delay_exit();
@@ -328,19 +339,21 @@ main() {
 	}
 
 	// Print DOL args.
-#if VERBOSE_LOGGING
-	if (payload.argv.length > 0) {
-		kprintf("----------\n");
-		size_t position = 0;
-		for (int i = 0; i < payload.argv.argc; ++i) {
-			kprintf("arg%i: %s\n", i, payload.argv.commandLine + position);
-			position += strlen(payload.argv.commandLine + position) + 1;
+	if (debug_enabled) {
+		if (payload.argv.length > 0) {
+			kprintf("\nDEBUG: About to print CLI args. Press A to continue...\n");
+			wait_for_confirmation();
+			kprintf("----------\n");
+			size_t position = 0;
+			for (int i = 0; i < payload.argv.argc; ++i) {
+				kprintf("arg%i: %s\n", i, payload.argv.commandLine + position);
+				position += strlen(payload.argv.commandLine + position) + 1;
+			}
+			kprintf("----------\n\n");
+		} else {
+			kprintf("DEBUG: No CLI args\n");
 		}
-		kprintf("----------\n\n");
-	} else {
-		kprintf("No CLI args\n");
 	}
-#endif
 
 	// Prepare DOL argv.
 	if (payload.argv.length > 0) {

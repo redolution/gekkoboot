@@ -153,10 +153,7 @@ It will be saved as `boot.dol` and can be used in conjunction with the various
 
 ## Troubleshooting
 
-gekkoboot displays useful diagnostic messages as it attempts to load the selected DOL.
-But it's so fast you may not have time to read or even see them.
-If you hold the down direction on the D-Pad, the messages will remain on screen
-until you let go.
+Enable debug mode by holding d-pad in the down direction. This will allow you to read the diagnostic messages as well as enable more verbose output. Look for warning messages about unrecognized configuration parameters, file read failures, etc.
 
 When choosing a shortcut button, beware that some software checks for buttons
 held at boot to alter certain behaviors.

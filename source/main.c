@@ -62,8 +62,38 @@ void dol_alloc(u8 **_dol, int size)
     *_dol = dol;
 }
 
-void load_parse_cli(char **_dol_argv, int *_dol_argc, char *path)
+void read_dol_file(u8 **_dol, char *path)
 {
+    *_dol = NULL;
+
+    kprintf("Reading %s\n", path);
+    FIL file;
+    FRESULT open_result = f_open(&file, path, FA_READ);
+    if (open_result != FR_OK)
+    {
+        kprintf("Failed to open file: %s\n", get_fresult_message(open_result));
+        return;
+    }
+
+    size_t size = f_size(&file);
+    u8* dol;
+    dol_alloc(&dol, size);
+    if (!dol)
+    {
+        return;
+    }
+    UINT _;
+    f_read(&file, dol, size, &_);
+    f_close(&file);
+
+    *_dol = dol;
+}
+
+void read_cli_file(char **_cli, int *_size, char *path)
+{
+    *_cli = NULL;
+    *_size = 0;
+
     int path_length = strlen(path);
     path[path_length - 3] = 'c';
     path[path_length - 2] = 'l';
@@ -112,13 +142,16 @@ void load_parse_cli(char **_dol_argv, int *_dol_argc, char *path)
       size++;
     }
 
+    *_cli = cli;
+    *_size = size;
+}
+
+void parse_cli_file(char **_dol_argv, int *_dol_argc, char *cli, int size)
+{
     // Parse CLI file
     // https://github.com/emukidid/swiss-gc/blob/a0fa06d81360ad6d173acd42e4dd5495e268de42/cube/swiss/source/swiss.c#L1236
     char **dol_argv = _dol_argv;
     int dol_argc = 0;
-
-    dol_argv[dol_argc] = path;
-    dol_argc++;
 
     // First argument is at the beginning of the file
     if (cli[0] != '\r' && cli[0] != '\n')
@@ -179,27 +212,22 @@ int load_fat(BOOT_PAYLOAD *payload, const char *slot_name, const DISC_INTERFACE 
     for (int i = 0; i < num_paths; ++i)
     {
         char *path = paths[i];
-        kprintf("Reading %s\n", path);
-        FIL file;
-        FRESULT open_result = f_open(&file, path, FA_READ);
-        if (open_result != FR_OK)
-        {
-            kprintf("Failed to open file: %s\n", get_fresult_message(open_result));
-            continue;
-        }
-
-        size_t size = f_size(&file);
-        dol_alloc(&payload->dol, size);
+        read_dol_file(&payload->dol, path);
         if (!payload->dol)
         {
             continue;
         }
-        UINT _;
-        f_read(&file, payload->dol, size, &_);
-        f_close(&file);
 
         // Attempt to load and parse CLI file
-        load_parse_cli(payload->dol_argv, &payload->dol_argc, path);
+        char *cli;
+        int cli_size;
+        read_cli_file(&cli, &cli_size, path);
+
+        // Parse CLI file.
+        if (cli)
+        {
+            parse_cli_file(payload->dol_argv, &payload->dol_argc, cli, cli_size);
+        }
 
         res = 1;
         break;

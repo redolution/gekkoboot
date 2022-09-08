@@ -1,3 +1,4 @@
+#include "cli_args.h"
 #include "filesystem.h"
 #include "shortcut.h"
 #include "version.h"
@@ -16,12 +17,9 @@
 
 #define VERBOSE_LOGGING 0
 
-#define MAX_NUM_ARGV 1024
-
 typedef struct {
 	u8 *dol;
-	int dol_argc;
-	char *dol_argv[MAX_NUM_ARGV];
+	struct __argv argv;
 } BOOT_PAYLOAD;
 
 u16 all_buttons_held;
@@ -54,44 +52,6 @@ read_cli_file(char **_cli, char *path) {
 	fs_read_file_string((const char **) _cli, path);
 }
 
-void
-parse_cli_file(char **_dol_argv, int *_dol_argc, char *cli, int size) {
-	// Parse CLI file
-	// https://github.com/emukidid/swiss-gc/blob/a0fa06d81360ad6d173acd42e4dd5495e268de42/cube/swiss/source/swiss.c#L1236
-	char **dol_argv = _dol_argv;
-	int dol_argc = 0;
-
-	// First argument is at the beginning of the file
-	if (cli[0] != '\r' && cli[0] != '\n') {
-		dol_argv[dol_argc] = cli;
-		dol_argc++;
-	}
-
-	// Search for the others after each newline
-	for (int i = 0; i < size; i++) {
-		if (cli[i] == '\r' || cli[i] == '\n') {
-			cli[i] = '\0';
-		} else if (cli[i - 1] == '\0') {
-			dol_argv[dol_argc] = cli + i;
-			dol_argc++;
-			if (dol_argc >= MAX_NUM_ARGV) {
-				kprintf("Reached max of %i args.\n", MAX_NUM_ARGV);
-				break;
-			}
-		}
-	}
-
-	kprintf("Found %i CLI args\n", dol_argc);
-
-#if VERBOSE_LOGGING
-	for (int i = 0; i < dol_argc; ++i) {
-		kprintf("arg%i: %s\n", i, dol_argv[i]);
-	}
-#endif
-
-	*_dol_argc = dol_argc;
-}
-
 int
 load_shortcut_files(BOOT_PAYLOAD *payload, int shortcut_index) {
 	char *path = shortcuts[shortcut_index].path;
@@ -111,7 +71,8 @@ load_shortcut_files(BOOT_PAYLOAD *payload, int shortcut_index) {
 
 	// Parse CLI file.
 	if (cli) {
-		parse_cli_file(payload->dol_argv, &payload->dol_argc, cli, strlen(cli));
+		parse_cli_args(&payload->argv, cli);
+		free((void *) cli);
 	}
 
 	return 1;
@@ -337,7 +298,10 @@ main() {
 	// Init payload.
 	BOOT_PAYLOAD payload;
 	payload.dol = NULL;
-	payload.dol_argc = 0;
+	payload.argv.argc = 0;
+	payload.argv.length = 0;
+	payload.argv.commandLine = NULL;
+	payload.argv.argvMagic = ARGV_MAGIC;
 
 	// Attempt to load from each device.
 	if (load_usb(&payload, 'B')) {
@@ -368,39 +332,24 @@ load:
 		}
 	}
 
-	struct __argv dolargs;
-	dolargs.commandLine = (char *) NULL;
-	dolargs.length = 0;
-
-	// https://github.com/emukidid/swiss-gc/blob/f5319aab248287c847cb9468325ebcf54c993fb1/cube/swiss/source/aram/sidestep.c#L350
-	if (payload.dol_argc) {
-		dolargs.argvMagic = ARGV_MAGIC;
-		dolargs.argc = payload.dol_argc;
-		dolargs.length = 1;
-
-		for (int i = 0; i < payload.dol_argc; i++) {
-			size_t arg_length = strlen(payload.dol_argv[i]) + 1;
-			dolargs.length += arg_length;
+	// Print DOL args.
+#if VERBOSE_LOGGING
+	if (payload.argv.length > 0) {
+		kprintf("----------\n");
+		size_t position = 0;
+		for (int i = 0; i < payload.argv.argc; ++i) {
+			kprintf("arg%i: %s\n", i, payload.argv.commandLine + position);
+			position += strlen(payload.argv.commandLine + position) + 1;
 		}
+		kprintf("----------\n\n");
+	} else {
+		kprintf("No CLI args\n");
+	}
+#endif
 
-		kprintf("CLI argv size is %iB\n", dolargs.length);
-		dolargs.commandLine = (char *) malloc(dolargs.length);
-
-		if (!dolargs.commandLine) {
-			kprintf("Couldn't allocate memory for CLI argv\n");
-			dolargs.length = 0;
-		} else {
-			unsigned int position = 0;
-			for (int i = 0; i < payload.dol_argc; i++) {
-				size_t arg_length = strlen(payload.dol_argv[i]) + 1;
-				memcpy(dolargs.commandLine + position,
-				       payload.dol_argv[i],
-				       arg_length);
-				position += arg_length;
-			}
-			dolargs.commandLine[dolargs.length - 1] = '\0';
-			DCStoreRange(dolargs.commandLine, dolargs.length);
-		}
+	// Prepare DOL argv.
+	if (payload.argv.length > 0) {
+		DCStoreRange(payload.argv.commandLine, payload.argv.length);
 	}
 
 	memcpy((void *) STUB_ADDR, stub, (size_t) stub_size);
@@ -412,8 +361,8 @@ load:
 	SYS_SwitchFiber(
 		(intptr_t) payload.dol,
 		0,
-		(intptr_t) dolargs.commandLine,
-		dolargs.length,
+		(intptr_t) payload.argv.commandLine,
+		payload.argv.length,
 		STUB_ADDR,
 		STUB_STACK
 	);

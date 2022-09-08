@@ -7,7 +7,7 @@
 
 // 0 - Failure
 // 1 - OK/Empty
-int parse_cli_args(struct __argv *argv, const char *cli_option_str)
+int parse_cli_args(struct __argv *argv, const char **cli_options_strs, int num_cli_options_strs)
 {
     kprintf("Parsing CLI args...\n");
 
@@ -20,50 +20,56 @@ int parse_cli_args(struct __argv *argv, const char *cli_option_str)
     int argc = 0;
     size_t argv_size = 1;
 
-    int found_arg_start = false;
-    size_t arg_start_index = 0;
-    size_t arg_end_index = 0;
-
-    int eof = false;
-    for (size_t i = 0; !eof; i++)
+    for (int oi = 0; oi < num_cli_options_strs; ++oi)
     {
-        eof = cli_option_str[i] == '\0';
+        const char *cli_option_str = cli_options_strs[oi];
+        int found_arg_start = false;
+        size_t arg_start_index = 0;
+        size_t arg_end_index = 0;
 
-        // Check if we are at the end of a line.
-        if (cli_option_str[i] == '\n' || eof)
+        int eof = false;
+        for (size_t i = 0; !eof; i++)
         {
-            // Check if we ever found a start to the arg.
-            if (found_arg_start)
-            {
-                // Record the arg.
-                size_t line_len = (arg_end_index - arg_start_index) + 1;
-                args[argc] = cli_option_str + arg_start_index;
-                arg_lengths[argc] = line_len;
-                argc++;
-                argv_size += line_len + 1;
+            eof = cli_option_str[i] == '\0';
 
-                if (argc == MAX_NUM_ARGV)
+            // Check if we are at the end of a line.
+            if (cli_option_str[i] == '\n' || eof)
+            {
+                // Check if we ever found a start to the arg.
+                if (found_arg_start)
                 {
-                    kprintf("Reached max of %i args.\n", MAX_NUM_ARGV);
-                    break;
-                }
+                    // Record the arg.
+                    size_t line_len = (arg_end_index - arg_start_index) + 1;
+                    args[argc] = cli_option_str + arg_start_index;
+                    arg_lengths[argc] = line_len;
+                    argc++;
+                    argv_size += line_len + 1;
 
-                // Reset.
-                found_arg_start = false;
+                    if (argc == MAX_NUM_ARGV)
+                    {
+                        kprintf("Reached max of %i args.\n", MAX_NUM_ARGV);
+                        goto loop_break;
+                    }
+
+                    // Reset.
+                    found_arg_start = false;
+                }
             }
-        }
-        // Check if we have a non-whitespace character.
-        else if (cli_option_str[i] != ' ' && cli_option_str[i] != '\t' && cli_option_str[i] != '\r')
-        {
-            // Record the start and end of the arg.
-            if (!found_arg_start)
+            // Check if we have a non-whitespace character.
+            else if (cli_option_str[i] != ' ' && cli_option_str[i] != '\t' && cli_option_str[i] != '\r')
             {
-                found_arg_start = true;
-                arg_start_index = i;
+                // Record the start and end of the arg.
+                if (!found_arg_start)
+                {
+                    found_arg_start = true;
+                    arg_start_index = i;
+                }
+                arg_end_index = i;
             }
-            arg_end_index = i;
         }
     }
+
+loop_break:
 
     if (argc == 0)
     {

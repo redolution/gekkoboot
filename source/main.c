@@ -76,8 +76,12 @@ void read_dol_file(u8 **dol_file, const char *path)
 {
     *dol_file = NULL;
 
-    kprintf("Reading %s\n", path);
+    kprintf("Trying DOL file: %s\n", path);
     fs_read_file((void **)dol_file, path);
+    if (dol_file)
+    {
+        kprintf("->> DOL loaded\n");
+    }
 }
 
 void read_cli_file(const char **cli_file, const char *dol_path)
@@ -98,8 +102,12 @@ void read_cli_file(const char **cli_file, const char *dol_path)
     path[path_len - 1] = 'i';
     path[path_len    ] = '\0';
 
-    kprintf("Reading %s\n", path);
+    kprintf("Trying CLI file: %s\n", path);
     fs_read_file_string(cli_file, path);
+    if (cli_file)
+    {
+        kprintf("->> CLI file loaded\n");
+    }
 }
 
 // 0 - Device should not be used.
@@ -121,9 +129,15 @@ int load_shortcut_files(BOOT_PAYLOAD *payload, int shortcut_index)
         return 0;
     }
 
+    kprintf("Will boot DOL\n");
+
     // Attempt to read CLI file.
     const char *cli_file;
     read_cli_file(&cli_file, dol_path);
+    if (!cli_file)
+    {
+        kprintf("->> No CLI file\n");
+    }
 
     // Parse CLI file.
     if (cli_file)
@@ -154,7 +168,7 @@ int load_fat(BOOT_PAYLOAD *payload, const char *slot_name, const DISC_INTERFACE 
 
     char volume_label[256];
     fs_get_volume_label(slot_name, volume_label);
-    kprintf("Mounted %s as %s\n", volume_label, slot_name);
+    kprintf("Mounted \"%s\" volume from %s\n", volume_label, slot_name);
 
     // Attempt to load shortcut files.
     res = load_shortcut_files(payload, shortcut_index);
@@ -303,7 +317,7 @@ int main()
 
     if (all_buttons_held & PAD_BUTTON_LEFT || SYS_ResetButtonDown())
     {
-        kprintf("Skipped. Rebooting into original IPL...\n");
+        kprintf("Skip enabled. Rebooting into original IPL...\n\n");
         delay_exit();
         return 0;
     }
@@ -317,9 +331,14 @@ int main()
     {
         if (all_buttons_held & shortcuts[i].pad_buttons)
         {
+            kprintf("->> \"%s\" shortcut selected\n", shortcuts[i].name);
             shortcut_index = i;
             break;
         }
+    }
+    if (shortcut_index == 0)
+    {
+        kprintf("->> Using default shortcut\n");
     }
 
     // Init payload.
@@ -375,11 +394,18 @@ int main()
         DCStoreRange(payload.argv.commandLine, payload.argv.length);
     }
 
+    kprintf("Booting DOL...\n");
+
     // Load stub.
     memcpy((void *)STUB_ADDR, stub, stub_size);
     DCStoreRange((void *)STUB_ADDR, stub_size);
 
     delay_exit();
+
+    if (debug_enabled)
+    {
+        kprintf("DEBUG: Loading DOL...\n");
+    }
 
     // Boot DOL.
     SYS_ResetSystem(SYS_SHUTDOWN, 0, FALSE);

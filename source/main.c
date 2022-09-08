@@ -16,15 +16,27 @@
 #define STUB_ADDR  0x80001000
 #define STUB_STACK 0x80003000
 
+// Only used to silence erroneous undefined error in IDE
+#ifdef TB_BUS_CLOCK_FIX
+#ifndef TB_BUS_CLOCK
+#define TB_BUS_CLOCK 0
+#endif
+#endif
+
 #define VERBOSE_LOGGING 0
+
+// Global State
+// --------------------
+u16 all_buttons_held;
+extern u8 __xfb[];
+// --------------------
 
 typedef struct
 {
-    u8 *dol;
+    u8 *dol_file;
     struct __argv argv;
 } BOOT_PAYLOAD;
 
-u16 all_buttons_held;
 void scan_all_buttons_held()
 {
     PAD_ScanPads();
@@ -36,73 +48,84 @@ void scan_all_buttons_held()
     );
 }
 
-void read_dol_file(u8 **_dol, char *path)
+void read_dol_file(u8 **dol_file, const char *path)
 {
-    *_dol = NULL;
+    *dol_file = NULL;
 
     kprintf("Reading %s\n", path);
-    fs_read_file((void **)_dol, path);
+    fs_read_file((void **)dol_file, path);
 }
 
-void read_cli_file(char **_cli, char *path)
+void read_cli_file(char **cli_file, const char *dol_path)
 {
-    *_cli = NULL;
+    *cli_file = NULL;
 
-    int path_length = strlen(path);
+    int path_length = strlen(dol_path);
+    char path[path_length + 1];
+    strcpy(path, dol_path);
     path[path_length - 3] = 'c';
     path[path_length - 2] = 'l';
     path[path_length - 1] = 'i';
 
     kprintf("Reading %s\n", path);
-    fs_read_file_string((const char **)_cli, path);
+    fs_read_file_string((const char **)cli_file, path);
 }
 
+// 0 - Device should not be used.
+// 1 - Device should be used.
 int load_shortcut_files(BOOT_PAYLOAD *payload, int shortcut_index)
 {
-    char *path = shortcuts[shortcut_index].path;
-    read_dol_file(&payload->dol, path);
-    if (!payload->dol && shortcut_index != 0)
+    // Attempt to read shortcut paths from from mounted FAT device.
+    u8 *dol_file = NULL;
+    const char *dol_path = shortcuts[shortcut_index].path;
+    read_dol_file(&dol_file, dol_path);
+    if (!dol_file && shortcut_index != 0)
     {
         shortcut_index = 0;
-        path = shortcuts[shortcut_index].path;
-        read_dol_file(&payload->dol, path);
+        dol_path = shortcuts[shortcut_index].path;
+        read_dol_file(&dol_file, dol_path);
     }
-    if (!payload->dol)
+    if (!dol_file)
     {
         return 0;
     }
 
-    // Attempt to load and parse CLI file
-    char *cli;
-    read_cli_file(&cli, path);
+    // Attempt to read CLI file.
+    char *cli_file;
+    read_cli_file(&cli_file, dol_path);
 
     // Parse CLI file.
-    if (cli)
+    if (cli_file)
     {
-        parse_cli_args(&payload->argv, cli);
-        free((void *)cli);
+        parse_cli_args(&payload->argv, cli_file);
+        free((void *)cli_file);
     }
 
+    payload->dol_file = dol_file;
     return 1;
 }
 
-int load_fat(BOOT_PAYLOAD *payload, const char *slot_name, const DISC_INTERFACE *iface_, int shortcut_index)
+// 0 - Device should not be used.
+// 1 - Device should be used.
+int load_fat(BOOT_PAYLOAD *payload, const char *slot_name, const DISC_INTERFACE *iface, int shortcut_index)
 {
     int res = 0;
 
     kprintf("Trying %s\n", slot_name);
 
-    FS_RESULT mount_result = fs_mount(iface_);
-    if (mount_result != FS_OK)
+    // Mount device.
+    FS_RESULT result = fs_mount(iface);
+    if (result != FS_OK)
     {
-        kprintf("Couldn't mount %s: %s\n", slot_name, get_fs_result_message(mount_result));
+        kprintf("Couldn't mount %s: %s\n", slot_name, get_fs_result_message(result));
         goto end;
     }
 
-    char name[256];
-    fs_get_volume_label(slot_name, name);
-    kprintf("Mounted %s as %s\n", name, slot_name);
+    char volume_label[256];
+    fs_get_volume_label(slot_name, volume_label);
+    kprintf("Mounted %s as %s\n", volume_label, slot_name);
 
+    // Attempt to load shortcut files.
     res = load_shortcut_files(payload, shortcut_index);
 
     kprintf("Unmounting %s\n", slot_name);
@@ -115,8 +138,8 @@ end:
 unsigned int convert_int(unsigned int in)
 {
     unsigned int out;
-    char *p_in = (char *) &in;
-    char *p_out = (char *) &out;
+    char *p_in = (char *)&in;
+    char *p_out = (char *)&out;
     p_out[0] = p_in[3];
     p_out[1] = p_in[2];
     p_out[2] = p_in[1];
@@ -129,30 +152,22 @@ unsigned int convert_int(unsigned int in)
 #define GC_READY 0x88
 #define GC_OK    0x89
 
+// 0 - Device should not be used.
+// 1 - Device should be used.
 int load_usb(BOOT_PAYLOAD *payload, char slot)
 {
+    int res = 0;
+    int channel = slot == 'B' ? 1 : 0;
+
     kprintf("Trying USB Gecko in slot %c\n", slot);
-
-    int channel, res = 1;
-
-    switch (slot)
-    {
-    case 'B':
-        channel = 1;
-        break;
-
-    case 'A':
-    default:
-        channel = 0;
-        break;
-    }
 
     if (!usb_isgeckoalive(channel))
     {
         kprintf("Not present\n");
-        res = 0;
-        goto end;
+        return res;
     }
+
+    res = 1;
 
     usb_flush(channel);
 
@@ -164,9 +179,11 @@ int load_usb(BOOT_PAYLOAD *payload, char slot)
 
     kprintf("Waiting for ack...\n");
     while ((data != PC_READY) && (data != PC_OK))
+    {
         usb_recvbuffer_safe(channel, &data, 1);
+    }
 
-    if(data == PC_READY)
+    if (data == PC_READY)
     {
         kprintf("Respond with OK\n");
         // Sometimes the PC can fail to receive the byte, this helps
@@ -187,34 +204,32 @@ int load_usb(BOOT_PAYLOAD *payload, char slot)
     }
     kprintf("DOL size is %iB\n", size);
 
-    u8 *dol = (u8 *)malloc(size);
-
-    if(!dol)
+    u8 *dol_file = (u8 *)malloc(size);
+    if (!dol_file)
     {
-        res = 0;
-        goto end;
+        kprintf("Couldn't allocate memory for DOL file\n");
+        return res;
     }
 
     kprintf("Receiving file...\n");
-    unsigned char *pointer = dol;
+    unsigned char *pointer = dol_file;
     while (size > 0xF7D8)
     {
-        usb_recvbuffer_safe(channel, (void *) pointer, 0xF7D8);
+        usb_recvbuffer_safe(channel, (void *)pointer, 0xF7D8);
         size -= 0xF7D8;
         pointer += 0xF7D8;
     }
-    if(size)
-        usb_recvbuffer_safe(channel, (void *) pointer, size);
+    if (size)
+    {
+        usb_recvbuffer_safe(channel, (void *)pointer, size);
+    }
 
-    payload->dol = dol;
-
-end:
+    payload->dol_file = dol_file;
     return res;
 }
 
-extern u8 __xfb[];
-
-void delay_exit() {
+void delay_exit()
+{
     // Wait while the d-pad down direction or reset button is held.
     if (all_buttons_held & PAD_BUTTON_DOWN)
     {
@@ -258,6 +273,7 @@ int main()
     EXI_Sync(EXI_CHANNEL_0);
     EXI_Deselect(EXI_CHANNEL_0);
     EXI_Unlock(EXI_CHANNEL_0);
+    // Since we've disabled the Qoob, we wil reboot to the Nintendo IPL
 
     // Set the timebase properly for games
     // Note: fuck libogc and dkppc
@@ -268,7 +284,6 @@ int main()
 
     if (all_buttons_held & PAD_BUTTON_LEFT || SYS_ResetButtonDown())
     {
-        // Since we've disabled the Qoob, we wil reboot to the Nintendo IPL
         kprintf("Skipped. Rebooting into original IPL...\n");
         delay_exit();
         return 0;
@@ -290,28 +305,24 @@ int main()
 
     // Init payload.
     BOOT_PAYLOAD payload;
-    payload.dol = NULL;
+    payload.dol_file = NULL;
     payload.argv.argc = 0;
     payload.argv.length = 0;
     payload.argv.commandLine = NULL;
     payload.argv.argvMagic = ARGV_MAGIC;
 
     // Attempt to load from each device.
-    if (load_usb(&payload, 'B')) goto load;
+    int res = (
+           load_usb(&payload, 'B')
+        || load_fat(&payload, "sdb", &__io_gcsdb, shortcut_index)
+        || load_usb(&payload, 'A')
+        || load_fat(&payload, "sda", &__io_gcsda, shortcut_index)
+        || load_fat(&payload, "sd2", &__io_gcsd2, shortcut_index)
+    );
 
-    if (load_fat(&payload, "sdb", &__io_gcsdb, shortcut_index)) goto load;
-
-    if (load_usb(&payload, 'A')) goto load;
-
-    if (load_fat(&payload, "sda", &__io_gcsda, shortcut_index)) goto load;
-
-    if (load_fat(&payload, "sd2", &__io_gcsd2, shortcut_index)) goto load;
-
-load:
-    if (!payload.dol)
+    if (!res || !payload.dol_file)
     {
         // If we reach here, all attempts to load a DOL failed
-        // Since we've disabled the Qoob, we wil reboot to the Nintendo IPL
         kprintf("No DOL loaded. Rebooting into original IPL...\n");
         delay_exit();
         return 0;
@@ -342,14 +353,18 @@ load:
         DCStoreRange(payload.argv.commandLine, payload.argv.length);
     }
 
-    memcpy((void *) STUB_ADDR, stub, stub_size);
-    DCStoreRange((void *) STUB_ADDR, stub_size);
+    // Load stub.
+    memcpy((void *)STUB_ADDR, stub, stub_size);
+    DCStoreRange((void *)STUB_ADDR, stub_size);
 
     delay_exit();
 
+    // Boot DOL.
     SYS_ResetSystem(SYS_SHUTDOWN, 0, FALSE);
-    SYS_SwitchFiber((intptr_t)payload.dol, 0,
+    SYS_SwitchFiber((intptr_t)payload.dol_file, 0,
                     (intptr_t)payload.argv.commandLine, payload.argv.length,
                     STUB_ADDR, STUB_STACK);
+
+    // Will never reach here.
     return 0;
 }

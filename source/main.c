@@ -18,10 +18,14 @@
 
 #define VERBOSE_LOGGING 0
 
-u8 *dol = NULL;
-int dol_argc = 0;
 #define MAX_NUM_ARGV 1024
-char *dol_argv[MAX_NUM_ARGV];
+
+typedef struct
+{
+    u8 *dol;
+    int dol_argc;
+    char *dol_argv[MAX_NUM_ARGV];
+} BOOT_PAYLOAD;
 
 u16 all_buttons_held;
 void scan_all_buttons_held()
@@ -35,7 +39,7 @@ void scan_all_buttons_held()
     );
 }
 
-void dol_alloc(int size)
+void dol_alloc(u8 **_dol, int size)
 {
     int mram_size = (SYS_GetArenaHi() - SYS_GetArenaLo());
     kprintf("Memory available: %iB\n", mram_size);
@@ -48,15 +52,17 @@ void dol_alloc(int size)
         return;
     }
 
-    dol = (u8 *) memalign(32, size);
+    u8 *dol = (u8 *) memalign(32, size);
 
     if (!dol)
     {
         kprintf("Couldn't allocate memory\n");
     }
+
+    *_dol = dol;
 }
 
-void load_parse_cli(char *path)
+void load_parse_cli(char **_dol_argv, int *_dol_argc, char *path)
 {
     int path_length = strlen(path);
     path[path_length - 3] = 'c';
@@ -108,6 +114,9 @@ void load_parse_cli(char *path)
 
     // Parse CLI file
     // https://github.com/emukidid/swiss-gc/blob/a0fa06d81360ad6d173acd42e4dd5495e268de42/cube/swiss/source/swiss.c#L1236
+    char **dol_argv = _dol_argv;
+    int dol_argc = 0;
+
     dol_argv[dol_argc] = path;
     dol_argc++;
 
@@ -144,9 +153,11 @@ void load_parse_cli(char *path)
         kprintf("arg%i: %s\n", i, dol_argv[i]);
     }
     #endif
+
+    *_dol_argc = dol_argc;
 }
 
-int load_fat(const char *slot_name, const DISC_INTERFACE *iface_, char **paths, int num_paths)
+int load_fat(BOOT_PAYLOAD *payload, const char *slot_name, const DISC_INTERFACE *iface_, char **paths, int num_paths)
 {
     int res = 0;
 
@@ -178,17 +189,17 @@ int load_fat(const char *slot_name, const DISC_INTERFACE *iface_, char **paths, 
         }
 
         size_t size = f_size(&file);
-        dol_alloc(size);
-        if (!dol)
+        dol_alloc(&payload->dol, size);
+        if (!payload->dol)
         {
             continue;
         }
         UINT _;
-        f_read(&file, dol, size, &_);
+        f_read(&file, payload->dol, size, &_);
         f_close(&file);
 
         // Attempt to load and parse CLI file
-        load_parse_cli(path);
+        load_parse_cli(payload->dol_argv, &payload->dol_argc, path);
 
         res = 1;
         break;
@@ -219,7 +230,7 @@ unsigned int convert_int(unsigned int in)
 #define GC_READY 0x88
 #define GC_OK    0x89
 
-int load_usb(char slot)
+int load_usb(BOOT_PAYLOAD *payload, char slot)
 {
     kprintf("Trying USB Gecko in slot %c\n", slot);
 
@@ -270,10 +281,10 @@ int load_usb(char slot)
     usb_recvbuffer_safe(channel, &size, 4);
     size = convert_int(size);
 
-    dol_alloc(size);
-    unsigned char* pointer = dol;
+    dol_alloc(&payload->dol, size);
+    unsigned char* pointer = payload->dol;
 
-    if(!dol)
+    if(!payload->dol)
     {
         res = 0;
         goto end;
@@ -367,18 +378,24 @@ int main()
 
     paths[num_paths++] = shortcuts[0].path;
 
-    if (load_usb('B')) goto load;
+    // Init payload.
+    BOOT_PAYLOAD payload;
+    payload.dol = NULL;
+    payload.dol_argc = 0;
 
-    if (load_fat("sdb", &__io_gcsdb, paths, num_paths)) goto load;
+    // Attempt to load from each device.
+    if (load_usb(&payload, 'B')) goto load;
 
-    if (load_usb('A')) goto load;
+    if (load_fat(&payload, "sdb", &__io_gcsdb, paths, num_paths)) goto load;
 
-    if (load_fat("sda", &__io_gcsda, paths, num_paths)) goto load;
+    if (load_usb(&payload, 'A')) goto load;
 
-    if (load_fat("sd2", &__io_gcsd2, paths, num_paths)) goto load;
+    if (load_fat(&payload, "sda", &__io_gcsda, paths, num_paths)) goto load;
+
+    if (load_fat(&payload, "sd2", &__io_gcsd2, paths, num_paths)) goto load;
 
 load:
-    if (!dol)
+    if (!payload.dol)
     {
         // If we reach here, all attempts to load a DOL failed
         // Since we've disabled the Qoob, we wil reboot to the Nintendo IPL
@@ -392,15 +409,15 @@ load:
     dolargs.length = 0;
     
     // https://github.com/emukidid/swiss-gc/blob/f5319aab248287c847cb9468325ebcf54c993fb1/cube/swiss/source/aram/sidestep.c#L350
-    if (dol_argc)
+    if (payload.dol_argc)
     {
         dolargs.argvMagic = ARGV_MAGIC;
-        dolargs.argc = dol_argc;
+        dolargs.argc = payload.dol_argc;
         dolargs.length = 1;
 
-        for (int i = 0; i < dol_argc; i++)
+        for (int i = 0; i < payload.dol_argc; i++)
         {
-            size_t arg_length = strlen(dol_argv[i]) + 1;
+            size_t arg_length = strlen(payload.dol_argv[i]) + 1;
             dolargs.length += arg_length;
         }
 
@@ -415,10 +432,10 @@ load:
         else
         {
             unsigned int position = 0;
-            for (int i = 0; i < dol_argc; i++)
+            for (int i = 0; i < payload.dol_argc; i++)
             {
-                size_t arg_length = strlen(dol_argv[i]) + 1;
-                memcpy(dolargs.commandLine + position, dol_argv[i], arg_length);
+                size_t arg_length = strlen(payload.dol_argv[i]) + 1;
+                memcpy(dolargs.commandLine + position, payload.dol_argv[i], arg_length);
                 position += arg_length;
             }
             dolargs.commandLine[dolargs.length - 1] = '\0';
@@ -432,7 +449,7 @@ load:
     delay_exit();
 
     SYS_ResetSystem(SYS_SHUTDOWN, 0, FALSE);
-    SYS_SwitchFiber((intptr_t) dol, 0,
+    SYS_SwitchFiber((intptr_t) payload.dol, 0,
                     (intptr_t) dolargs.commandLine, dolargs.length,
                     STUB_ADDR, STUB_STACK);
     return 0;

@@ -392,6 +392,8 @@ int main()
 
     if (load_fat("sda", &__io_gcsda, paths, num_paths)) goto load;
 
+    if (load_fat("gcl", &__io_gcode, paths, num_paths)) goto load;
+
     if (load_fat("sd2", &__io_gcsd2, paths, num_paths)) goto load;
 
 load:

@@ -350,11 +350,6 @@ int main()
     EXI_Deselect(EXI_CHANNEL_0);
     EXI_Unlock(EXI_CHANNEL_0);
 
-    // Set the timebase properly for games
-    // Note: fuck libogc and dkppc
-    u32 t = ticks_to_secs(SYS_Time());
-    settime(secs_to_ticks(t));
-
     PAD_ScanPads();
 
     all_buttons_held = (

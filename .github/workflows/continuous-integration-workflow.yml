@@ -27,7 +27,7 @@ jobs:
 
     - name: Build libogc2
       run: |
-        sed -i 's/-O2/-Os -flto/' Makefile
+        patch -Np1 -i ../ogc.patch
         make install
       working-directory: libogc2
 

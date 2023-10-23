@@ -1,0 +1,113 @@
+From d727901a9f7100c31557512eb66aeda7932cba6e Mon Sep 17 00:00:00 2001
+From: novenary <streetwalkermc@gmail.com>
+Date: Mon, 23 Oct 2023 15:37:08 +0300
+Subject: [PATCH 1/3] Remove lwp
+
+---
+ Makefile        | 5 ++---
+ libogc/system.c | 1 +
+ libogc/video.c  | 4 ++--
+ 3 files changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index 56ade00..2d8ee38 100644
+--- a/Makefile
++++ b/Makefile
+@@ -132,9 +132,8 @@ LWIPOBJ		:=	network.o netio.o gcif.o	\
+ 
+ #---------------------------------------------------------------------------------
+ OGCOBJ		:=	\
+-			console.o  lwp_priority.o lwp_queue.o lwp_threadq.o lwp_threads.o lwp_sema.o	\
+-			lwp_messages.o lwp.o lwp_handler.o lwp_stack.o lwp_mutex.o 	\
+-			lwp_watchdog.o lwp_wkspace.o lwp_objmgr.o lwp_heap.o sys_state.o \
++			console.o  \
++			sys_state.o \
+ 			exception_handler.o exception.o irq.o irq_handler.o semaphore.o \
+ 			video_asm.o video.o pad.o dvd.o exi.o mutex.o arqueue.o	arqmgr.o	\
+ 			cache_asm.o system.o system_asm.o cond.o			\
+diff --git a/libogc/system.c b/libogc/system.c
+index bf07905..2f2bbd5 100644
+--- a/libogc/system.c
++++ b/libogc/system.c
+@@ -1116,6 +1116,7 @@ void SYS_Init(void)
+ 	__libc_init(1);
+ 	__lwp_thread_startmultitasking();
+ 	_CPU_ISR_Restore(level);
++	main();
+ }
+ 
+ // This function gets called inside the main thread, prior to the application's main() function
+diff --git a/libogc/video.c b/libogc/video.c
+index 62782a5..b22510e 100644
+--- a/libogc/video.c
++++ b/libogc/video.c
+@@ -2741,12 +2741,12 @@ void VIDEO_WaitVSync(void)
+ 	u32 level;
+ 	u32 retcnt;
+ 
+-	_CPU_ISR_Disable(level);
++	//_CPU_ISR_Disable(level);
+ 	retcnt = retraceCount;
+ 	do {
+ 		LWP_ThreadSleep(video_queue);
+ 	} while(retraceCount==retcnt);
+-	_CPU_ISR_Restore(level);
++	//_CPU_ISR_Restore(level);
+ }
+ 
+ void VIDEO_SetFramebuffer(void *fb)
+-- 
+2.42.0
+
+
+From a19f2a1892f152c1377b5268549c4a20fb2309db Mon Sep 17 00:00:00 2001
+From: novenary <streetwalkermc@gmail.com>
+Date: Mon, 23 Oct 2023 15:37:36 +0300
+Subject: [PATCH 2/3] Optimize for size
+
+---
+ Makefile | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/Makefile b/Makefile
+index 2d8ee38..f52abcd 100644
+--- a/Makefile
++++ b/Makefile
+@@ -97,7 +97,7 @@ endif
+ INCLUDES	+=	-I$(PORTLIBS_PATH)/ppc/include
+ 
+ 
+-CFLAGS		:= -DLIBOGC_INTERNAL -g -O2 -fno-strict-aliasing -Wall -Wno-address-of-packed-member $(MACHDEP) $(INCLUDES)
++CFLAGS		:= -DLIBOGC_INTERNAL -g -Os -fno-strict-aliasing -Wall -Wno-address-of-packed-member $(MACHDEP) $(INCLUDES)
+ ASFLAGS		:=	$(MACHDEP) -mregnames -D_LANGUAGE_ASSEMBLY $(INCLUDES)
+ 
+ #---------------------------------------------------------------------------------
+-- 
+2.42.0
+
+
+From 7343d5bbb00c10c3718ed172f86424cdbc1b1b7b Mon Sep 17 00:00:00 2001
+From: novenary <streetwalkermc@gmail.com>
+Date: Mon, 23 Oct 2023 15:37:54 +0300
+Subject: [PATCH 3/3] Don't call GX_AbortFrame() from exception handler
+
+Saves a kilobyte or so
+---
+ libogc/exception.c | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/libogc/exception.c b/libogc/exception.c
+index 820b200..1800b98 100644
+--- a/libogc/exception.c
++++ b/libogc/exception.c
+@@ -237,7 +237,6 @@ static void waitForReload(void)
+ //just implement core for unrecoverable exceptions.
+ void c_default_exceptionhandler(frame_context *pCtx)
+ {
+-	GX_AbortFrame();
+ 	VIDEO_SetFramebuffer(exception_xfb);
+ 	__console_init(exception_xfb,20,20,640,574,1280);
+ 	CON_EnableGecko(1, true);
+-- 
+2.42.0
+

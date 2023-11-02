@@ -256,9 +256,21 @@ int load_usb(char slot)
     data = GC_READY;
     usb_sendbuffer_safe(channel, &data, 1);
 
-    kprintf("Waiting for ack...\n");
+    kprintf("Waiting for ack (5s timeout)...\n");
+    u64 current_time, start_time = gettime();
+
     while ((data != PC_READY) && (data != PC_OK))
-        usb_recvbuffer_safe(channel, &data, 1);
+    {
+        current_time = gettime();
+        if (diff_sec(start_time, current_time) >= 5) 
+        {
+            kprintf("PC did not respond in time\n");
+            res = 0;
+            goto end;
+        }
+
+        usb_recvbuffer_safe_ex(channel, &data, 1, 10); // 10 retries
+    }
 
     if(data == PC_READY)
     {

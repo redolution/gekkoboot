@@ -119,7 +119,7 @@ endif
 export BUILD_MAKE := @mkdir -p $(BUILD) && $(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
 
 #---------------------------------------------------------------------------------
-all: dol gci qoobpro viper dol_compressed gci_compressed
+all: dol gci qoobpro viper pico dol_compressed gci_compressed
 dol:
 	$(BUILD_MAKE) $(OUTPUT).dol
 gci:
@@ -130,6 +130,8 @@ qoobsx:
 	$(BUILD_MAKE) $(OUTPUT_SX).elf
 viper:
 	$(BUILD_MAKE) $(OUTPUT).vgc
+pico:
+	$(BUILD_MAKE) $(OUTPUT).uf2
 dol_compressed:
 	$(BUILD_MAKE) $(OUTPUT)_xz.dol
 gci_compressed:
@@ -197,6 +199,13 @@ $(OUTPUT_SX).elf: $(OUTPUT)_xz.qbsx
 #---------------------------------------------------------------------------------
 $(OUTPUT).vgc: $(OUTPUT).dol
 	@echo pack Viper IPL... $(notdir $@)
+	@cd $(PWD); $(DOL2IPL) /dev/null $< $@
+
+#---------------------------------------------------------------------------------
+# Pico-based modchips
+#---------------------------------------------------------------------------------
+$(OUTPUT).uf2: $(OUTPUT).dol
+	@echo pack Pico UF2... $(notdir $@)
 	@cd $(PWD); $(DOL2IPL) /dev/null $< $@
 
 #---------------------------------------------------------------------------------

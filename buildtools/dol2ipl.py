@@ -76,6 +76,36 @@ def flatten_dol(data):
     # Entry point, load address, memory image
     return header[56], dol_min, img
 
+def pack_uf2(data, base_address):
+    ret = bytearray()
+
+    seq = 0
+    addr = base_address
+    chunk_size = 256
+    total_chunks = (len(data) + chunk_size - 1) // chunk_size
+    while data:
+        chunk = data[:chunk_size]
+        data = data[chunk_size:]
+
+        ret += struct.pack(
+            "< 8I 476B I",
+            0x0A324655, # Magic 1 "UF2\n"
+            0x9E5D5157, # Magic 2
+            0x00002000, # Flags (family ID present)
+            addr,
+            len(chunk),
+            seq,
+            total_chunks,
+            0xE48BFF56, # Board family: Raspberry Pi RP2040
+            *chunk.ljust(476, b"\x00"),
+            0x0AB16F30, # Final magic
+        )
+
+        seq += 1
+        addr += chunk_size
+
+    return ret
+
 def main():
     if len(sys.argv) != 4:
         print(f"Usage: {sys.argv[0]} <original IPL> <executable> <output>")
@@ -136,6 +166,32 @@ def main():
 
         header = b"VIPR\x00\x02".ljust(16, b"\x00") + b"iplboot".ljust(16, b"\x00")
         out = header + scramble(bytearray(0x720) + img)[0x720:]
+
+    elif sys.argv[3].endswith(".uf2"):
+        if entry != 0x81300000 or load != 0x01300000:
+            print("Invalid entry point and base address (must be 0x81300000)")
+            return -1
+
+        img = scramble(bytearray(0x720) + img)[0x720:]
+
+        align_size = 4
+        img = (
+            img.ljust(
+                (len(img) + align_size - 1) // align_size * align_size,
+                b"\x00",
+            )
+            + b"PICO"
+        )
+
+        header_size = 32
+        header = struct.pack(
+            "> 8B I 20x",
+            *b"IPLBOOT ",
+            len(img) + header_size,
+        )
+        assert len(header) == header_size
+
+        out = pack_uf2(header + img, 0x10080000)
 
     elif sys.argv[3].endswith(".qbsx"):
         # SX BIOSes are always one page long

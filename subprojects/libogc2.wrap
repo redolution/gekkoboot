@@ -1,0 +1,4 @@
+[wrap-git]
+url = https://github.com/redolution/libogc2.git
+revision = head
+#depth = 1

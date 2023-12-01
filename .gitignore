@@ -8,3 +8,5 @@ ipl.rom
 *.vgc
 *.bin
 *.gci
+
+/subprojects/libogc2

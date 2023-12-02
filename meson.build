@@ -19,6 +19,8 @@ libogc_deps = libogc_proj.get_variable('deps')
 elf2dol = find_program('elf2dol')
 dols = []
 
+linker_script = meson.current_source_dir() / 'ogc.ld'
+
 iplboot = executable(
     'iplboot',
     'source/main.c',
@@ -29,6 +31,8 @@ iplboot = executable(
     'source/fatfs/ffunicode.c',
     'source/ffshim.c',
     dependencies: libogc_deps['ogc'],
+    link_args: ['-T' + linker_script],
+    link_depends: [linker_script],
     name_suffix: 'elf',
 )
 dols += [iplboot]

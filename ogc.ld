@@ -20,7 +20,7 @@ SECTIONS
 {
 	/* default base address */
 	/* use -Wl,--section-start,.init=0xADDRESS to change */
-	. = 0x81300000;
+	. = 0x80003100;
 
 	/* Program */
 	.init          :
@@ -266,8 +266,7 @@ __stack_addr = (__bss_start + SIZEOF(.bss) + 0x20000 + 7) & (-8);
 __stack_end = (__bss_start + SIZEOF(.bss));
 __intrstack_addr = (__stack_addr + 0x4000);
 __intrstack_end = (__stack_addr);
-__Arena1Lo = (0x80003100);
-__Arena1Hi = (0x81300000);
+__Arena1Lo = (__intrstack_addr + 31) & (-32);
+__Arena1Hi = (0x81700000);
 
-__gxregs = (__intrstack_addr + 31) & (-32);
-__xfb = (__gxregs + 0x800) + (0xC0000000 - 0x80000000);
+__xfb = ((__Arena1Hi + 31) & (-32)) + (0xC0000000 - 0x80000000);

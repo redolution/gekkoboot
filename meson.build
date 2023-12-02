@@ -18,6 +18,7 @@ libogc_deps = libogc_proj.get_variable('deps')
 
 elf2dol = find_program('elf2dol')
 dols = []
+compressed_exes = []
 
 linker_script = meson.current_source_dir() / 'ogc.ld'
 
@@ -35,7 +36,15 @@ iplboot = executable(
     link_depends: [linker_script],
     name_suffix: 'elf',
 )
-dols += [iplboot]
+compressed_exes += {
+    'exe': iplboot,
+    'link_args': [
+        '-Wl,--section-start,.init=0x01300000'
+    ],
+    'dol': true,
+}
+
+subdir('packer')
 
 foreach exe: dols
     custom_target(

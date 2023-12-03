@@ -9,6 +9,12 @@ jobs:
     container: devkitpro/devkitppc:latest
 
     steps:
+    - name: Install packages
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends python3-pip p7zip-full
+        pip3 install meson
+
     - name: Checkout iplboot
       uses: actions/checkout@v2
       with:
@@ -17,21 +23,14 @@ jobs:
     - name: Fetch Qoob prebuilt
       run: curl -Lo ipl.rom https://github.com/redolution/iplboot/releases/download/r5.2/iplboot.gcb
 
-    - name: Checkout libogc2
-      uses: actions/checkout@v2
-      with:
-        repository: extremscorner/libogc2
-        path: libogc2
+    - name: Build iplboot
+      run: |
+        export PATH="$DEVKITPPC/bin:$PATH"
+        meson setup . build --cross-file=devkitPPC.ini
+        ninja -C build
 
-    - name: Build libogc2
-      run: make install
-      working-directory: libogc2
-
-    - name: Build iplboot artifacts
-      run: make
-
-    - name: Upload iplboot artifacts
+    - name: Upload build artifacts
       uses: actions/upload-artifact@v2
       with:
         name: iplboot
-        path: build/iplboot*
+        path: build

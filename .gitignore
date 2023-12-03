@@ -10,3 +10,5 @@ ipl.rom
 *.gci
 
 /subprojects/libogc2
+
+!res/qoob_sx_13c_upgrade.elf

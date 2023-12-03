@@ -26,13 +26,10 @@ packer_stub = static_library(
 
 packer_linker_script = meson.current_source_dir() / 'link.ld'
 
-objcopy = find_program('objcopy')
 stat = find_program('stat')
 seven_zip = find_program('7z')
 
-foreach exe: compressed_exes
-    name = exe['exe'].name()
-
+foreach name, exe: compressed_exes
     bin = custom_target(
         name + '_bin',
         input: exe['exe'],
@@ -88,7 +85,10 @@ foreach exe: compressed_exes
         name_suffix: 'elf',
     )
 
+    compressed_exes += {
+        name: exe + {'compressed': out},
+    }
     if exe.get('dol', false)
-        dols += out
+        dols += {name: out}
     endif
 endforeach

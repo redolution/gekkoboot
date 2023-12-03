@@ -107,22 +107,17 @@ def pack_uf2(data, base_address):
     return ret
 
 def main():
-    if len(sys.argv) != 4:
-        print(f"Usage: {sys.argv[0]} <original IPL> <executable> <output>")
+    if len(sys.argv) not in range(3, 4 + 1):
+        print(f"Usage: {sys.argv[0]} <output> <executable> [<IPL ROM>|<SX updater>]")
+        return 1
 
-    with open(sys.argv[1], "rb") as f:
-        ipl = bytearray(f.read())
+    output = sys.argv[1]
+    executable = sys.argv[2]
 
-    header = ipl[:256]
-    bs1 = scramble(ipl[256:2 * 1024])
-
-    if header:
-        print(header.decode("ASCII"))
-
-    with open(sys.argv[2], "rb") as f:
+    with open(executable, "rb") as f:
         exe = bytearray(f.read())
 
-    if sys.argv[2].endswith(".dol"):
+    if executable.endswith(".dol"):
         entry, load, img = flatten_dol(exe)
         entry &= 0x017FFFFF
         entry |= 0x80000000
@@ -132,15 +127,24 @@ def main():
         print(f"Entry point:   0x{entry:0{8}X}")
         print(f"Load address:  0x{load:0{8}X}")
         print(f"Image size:    {size} bytes ({size // 1024}K)")
-    elif sys.argv[2].endswith(".elf"):
+    elif executable.endswith(".elf"):
         pass
     else:
         print("Unknown input format")
         return -1
 
-    header = bytearray(b"(C) iplboot".ljust(256, b"\x00"))
+    qoob_header = bytearray(b"(C) iplboot".ljust(256, b"\x00"))
 
-    if sys.argv[3].endswith(".gcb"):
+    if output.endswith(".gcb"):
+        if len(sys.argv) < 4:
+            print("Missing required IPL ROM!")
+            return 1
+
+        rom = sys.argv[3]
+        with open(rom, "rb") as f:
+            ipl = bytearray(f.read())
+        bs1 = scramble(ipl[256:2 * 1024])
+
         bs1[0x51C + 2:0x51C + 4] = struct.pack(">H", load >> 16)
         bs1[0x520 + 2:0x520 + 4] = struct.pack(">H", load & 0xFFFF)
         bs1[0x5D4 + 2:0x5D4 + 4] = struct.pack(">H", entry >> 16)
@@ -149,17 +153,17 @@ def main():
         bs1[0x528 + 2:0x528 + 4] = struct.pack(">H", size & 0xFFFF)
 
         # Qoob specific
-        npages = math.ceil((len(header) + len(bs1) + size) / 0x10000)
-        header[0xFD] = npages
+        npages = math.ceil((len(qoob_header) + len(bs1) + size) / 0x10000)
+        qoob_header[0xFD] = npages
         print(f"Qoob blocks:   {npages}")
 
         # Put it all together
-        out = header + scramble(bs1 + img)
+        out = qoob_header + scramble(bs1 + img)
 
         # Pad to a multiple of 64KB
         out += bytearray(npages * 0x10000 - len(out))
 
-    elif sys.argv[3].endswith(".vgc"):
+    elif output.endswith(".vgc"):
         if entry != 0x81300000 or load != 0x01300000:
             print("Invalid entry point and base address (must be 0x81300000)")
             return -1
@@ -167,7 +171,7 @@ def main():
         header = b"VIPR\x00\x02".ljust(16, b"\x00") + b"iplboot".ljust(16, b"\x00")
         out = header + scramble(bytearray(0x720) + img)[0x720:]
 
-    elif sys.argv[3].endswith(".uf2"):
+    elif output.endswith(".uf2"):
         if entry != 0x81300000 or load != 0x01300000:
             print("Invalid entry point and base address (must be 0x81300000)")
             return -1
@@ -193,24 +197,39 @@ def main():
 
         out = pack_uf2(header + img, 0x10080000)
 
-    elif sys.argv[3].endswith(".qbsx"):
+    elif output.startswith("qoob_sx_"):
+        if len(sys.argv) < 4:
+            print("Missing required updater!")
+            return 1
+
+        updater = sys.argv[3]
+        with open(updater, "rb") as f:
+            out = bytearray(f.read())
+
         # SX BIOSes are always one page long
-        header[0xFD] = 1
+        qoob_header[0xFD] = 1
 
-        out = header + scramble(exe, qoobsx=True)
+        img = qoob_header + scramble(exe, qoobsx=True)
 
-        if len(out) > 62800:
+        if len(img) > 62800:
             print("Warning: SX BIOS image too big to fit in flasher")
             return -1
-        if len(out) > 1 << 16:
+        if len(img) > 1 << 16:
             print("SX BIOS image too big")
             return -1
+
+        msg = b"QOOB SX iplboot install\0"
+        msg_offset = 7240
+        img_offset = 7404
+
+        out[msg_offset:msg_offset + len(msg)] = msg
+        out[img_offset:img_offset + len(img)] = img
 
     else:
         print("Unknown output format")
         return -1
 
-    with open(sys.argv[3], "wb") as f:
+    with open(output, "wb") as f:
         f.write(out)
 
 if __name__ == "__main__":

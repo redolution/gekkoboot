@@ -21,7 +21,7 @@ jobs:
         fetch-depth: 0
 
     - name: Fetch Qoob prebuilt
-      run: curl -Lo ipl.rom https://github.com/redolution/iplboot/releases/download/r5.2/iplboot.gcb
+      run: curl -Lo res/ipl.rom https://github.com/redolution/iplboot/releases/download/r5.2/iplboot.gcb
 
     - name: Build iplboot
       run: |

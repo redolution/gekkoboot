@@ -16,9 +16,12 @@ libogc_proj = subproject(
 )
 libogc_deps = libogc_proj.get_variable('deps')
 
+subdir('buildtools')
+subdir('res')
+objcopy = find_program('objcopy')
 elf2dol = find_program('elf2dol')
-dols = []
-compressed_exes = []
+dols = {}
+compressed_exes = {}
 
 linker_script = meson.current_source_dir() / 'ogc.ld'
 
@@ -37,21 +40,73 @@ iplboot = executable(
     name_suffix: 'elf',
 )
 compressed_exes += {
-    'exe': iplboot,
-    'link_args': [
-        '-Wl,--section-start,.init=0x01300000'
-    ],
-    'dol': true,
+    'iplboot': {
+        'exe': iplboot,
+        'link_args': [
+            '-Wl,--section-start,.init=0x01300000'
+        ],
+        'dol': true,
+    },
+    'iplboot_sx': {
+        'exe': iplboot,
+        'link_args': [
+            '-Wl,--section-start,.init=0x01500000'
+        ],
+    },
 }
 
 subdir('packer')
 
-foreach exe: dols
-    custom_target(
-        exe.name() + '_dol',
+foreach name, exe: dols
+    dol = custom_target(
+        name + '_dol',
         input: exe,
-        output: exe.name() + '.dol',
+        output: name + '.dol',
         command: [elf2dol, '@INPUT@', '@OUTPUT@'],
         build_by_default: true,
     )
+    dols += {name: dol}
 endforeach
+
+qoob_pro = custom_target(
+    'qoob_pro',
+    input: [dols['iplboot'], ipl_rom],
+    output: 'iplboot_qoob_pro.gcb',
+    command: [dol2ipl, '@OUTPUT@', '@INPUT@'],
+    build_by_default: true,
+)
+alias_target('qoob_pro', qoob_pro)
+
+sx_exe = compressed_exes['iplboot_sx']['compressed']
+qoob_sx_stripped = custom_target(
+    sx_exe.name() + '_stripped',
+    input: sx_exe,
+    output: sx_exe.name() + '_stripped.elf',
+    command: [objcopy, '-S', '@INPUT@', '@OUTPUT@'],
+)
+qoob_sx = custom_target(
+    'qoob_sx',
+    input: [qoob_sx_stripped, qoob_sx_updater],
+    output: 'qoob_sx_iplboot_upgrade.elf',
+    command: [dol2ipl, '@OUTPUT@', '@INPUT@'],
+    build_by_default: true,
+)
+alias_target('qoob_sx', qoob_sx)
+
+viper = custom_target(
+    'viper',
+    input: dols['iplboot'],
+    output: 'iplboot_viper.vgc',
+    command: [dol2ipl, '@OUTPUT@', '@INPUT@'],
+    build_by_default: true,
+)
+alias_target('viper', viper)
+
+pico = custom_target(
+    'pico',
+    input: dols['iplboot'],
+    output: 'iplboot_pico.uf2',
+    command: [dol2ipl, '@OUTPUT@', '@INPUT@'],
+    build_by_default: true,
+)
+alias_target('pico', pico)

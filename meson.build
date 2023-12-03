@@ -1,6 +1,6 @@
 project(
     'iplboot',
-    ['c'],
+    ['c', 'cpp'],
     meson_version: '>=1.2',
     default_options: {
         'optimization': 's',
@@ -52,6 +52,10 @@ compressed_exes += {
         'link_args': [
             '-Wl,--section-start,.init=0x01500000'
         ],
+    },
+    'iplboot_lowmem': {
+        'exe': iplboot,
+        'dol': true,
     },
 }
 
@@ -114,3 +118,12 @@ pico = custom_target(
     build_by_default: true,
 )
 alias_target('pico', pico)
+
+gci = custom_target(
+    'gci',
+    input: dols['iplboot_lowmem'],
+    output: 'iplboot_memcard.gci',
+    command: [dol2gci, '@INPUT@', '@OUTPUT@', 'boot.dol'],
+    build_by_default: true,
+)
+alias_target('gci', gci)

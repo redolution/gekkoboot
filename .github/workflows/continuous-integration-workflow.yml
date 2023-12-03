@@ -12,7 +12,7 @@ jobs:
     - name: Install packages
       run: |
         sudo apt-get update
-        sudo apt-get install -y --no-install-recommends python3-pip p7zip-full
+        sudo apt-get install -y --no-install-recommends build-essential python3-pip p7zip-full
         pip3 install meson
 
     - name: Checkout iplboot

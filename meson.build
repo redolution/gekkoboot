@@ -68,14 +68,18 @@ foreach name, exe: dols
     dols += {name: dol}
 endforeach
 
-qoob_pro = custom_target(
-    'qoob_pro',
-    input: [dols['iplboot'], ipl_rom],
-    output: 'iplboot_qoob_pro.gcb',
-    command: [dol2ipl, '@OUTPUT@', '@INPUT@'],
-    build_by_default: true,
-)
-alias_target('qoob_pro', qoob_pro)
+if ipl_rom.length() != 0
+    qoob_pro = custom_target(
+        'qoob_pro',
+        input: [dols['iplboot'], ipl_rom],
+        output: 'iplboot_qoob_pro.gcb',
+        command: [dol2ipl, '@OUTPUT@', '@INPUT@'],
+        build_by_default: true,
+    )
+    alias_target('qoob_pro', qoob_pro)
+else
+    warning('IPL ROM not found, building for Qoob Pro will not be possible!')
+endif
 
 sx_exe = compressed_exes['iplboot_sx']['compressed']
 qoob_sx_stripped = custom_target(

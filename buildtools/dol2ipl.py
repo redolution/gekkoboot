@@ -64,17 +64,23 @@ def scramble(data, *, qoobsx=False):
 
 def flatten_dol(data):
     header = struct.unpack(">64I", data[:256])
+    offsets = header[:18]
+    addresses = header[18:36]
+    sizes = header[36:54]
+    bss_address = header[54]
+    bss_size = header[55]
+    entry = header[56]
 
-    dol_min = min(a for a in header[18:36] if a)
-    dol_max = max(a + s for a, s in zip(header[18:36], header[36:54]))
+    dol_min = min(a for a in addresses if a)
+    dol_max = max(a + s for a, s in zip(addresses, sizes))
 
     img = bytearray(dol_max - dol_min)
 
-    for offset, address, length in zip(header[:18], header[18:36], header[36:54]):
-        img[address - dol_min:address + length - dol_min] = data[offset:offset + length]
+    for offset, address, size in zip(offsets, addresses, sizes):
+        img[address - dol_min:address + size - dol_min] = data[offset:offset + size]
 
     # Entry point, load address, memory image
-    return header[56], dol_min, img
+    return entry, dol_min, img
 
 def pack_uf2(data, base_address):
     ret = bytearray()
@@ -82,7 +88,7 @@ def pack_uf2(data, base_address):
     seq = 0
     addr = base_address
     chunk_size = 256
-    total_chunks = (len(data) + chunk_size - 1) // chunk_size
+    total_chunks = math.ceil(len(data) / chunk_size)
     while data:
         chunk = data[:chunk_size]
         data = data[chunk_size:]
@@ -180,10 +186,7 @@ def main():
 
         align_size = 4
         img = (
-            img.ljust(
-                (len(img) + align_size - 1) // align_size * align_size,
-                b"\x00",
-            )
+            img.ljust(math.ceil(len(img) / align_size) * align_size, b"\x00")
             + b"PICO"
         )
 

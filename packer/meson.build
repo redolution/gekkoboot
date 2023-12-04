@@ -85,9 +85,7 @@ foreach name, exe: compressed_exes
         name_suffix: 'elf',
     )
 
-    compressed_exes += {
-        name: exe + {'compressed': out},
-    }
+    set_variable(name + '_compressed', out)
     if exe.get('dol', false)
         dols += {name: out}
     endif

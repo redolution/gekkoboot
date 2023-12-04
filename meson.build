@@ -19,7 +19,15 @@ subdir('buildtools')
 subdir('res')
 objcopy = find_program('objcopy')
 elf2dol = find_program('elf2dol')
+
+# Add executables to this mapping to generate corresponding DOLs.
+# The variable '@key@_dol' will be set for later use.
 dols = {}
+
+# Add executables to this mapping as {'exe':, 'link_args':, 'dol':} to compress them.
+# The variable '@key@_compressed' will be set for later use.
+# The optional key 'dol' is a boolean that controls whether to add the compressed
+# executable to `dols`.
 compressed_exes = {}
 
 linker_script = meson.current_source_dir() / 'ogc.ld'
@@ -69,13 +77,13 @@ foreach name, exe: dols
         command: [elf2dol, '@INPUT@', '@OUTPUT@'],
         build_by_default: true,
     )
-    dols += {name: dol}
+    set_variable(name + '_dol', dol)
 endforeach
 
 if full_rom_opt.allowed()
     qoob_pro = custom_target(
         'qoob_pro',
-        input: [dols['iplboot'], ipl_rom],
+        input: [iplboot_dol, ipl_rom],
         output: 'iplboot_qoob_pro.gcb',
         command: [dol2ipl, '@OUTPUT@', '@INPUT@'],
         build_by_default: true,
@@ -83,16 +91,15 @@ if full_rom_opt.allowed()
     alias_target('qoob_pro', qoob_pro)
 endif
 
-sx_exe = compressed_exes['iplboot_sx']['compressed']
-qoob_sx_stripped = custom_target(
-    sx_exe.name() + '_stripped',
-    input: sx_exe,
-    output: sx_exe.name() + '_stripped.elf',
+iplboot_sx_stripped = custom_target(
+    iplboot_sx_compressed.name() + '_stripped',
+    input: iplboot_sx_compressed,
+    output: iplboot_sx_compressed.name() + '_stripped.elf',
     command: [objcopy, '-S', '@INPUT@', '@OUTPUT@'],
 )
 qoob_sx = custom_target(
     'qoob_sx',
-    input: [qoob_sx_stripped, qoob_sx_updater],
+    input: [iplboot_sx_stripped, qoob_sx_updater],
     output: 'qoob_sx_iplboot_upgrade.elf',
     command: [dol2ipl, '@OUTPUT@', '@INPUT@'],
     build_by_default: true,
@@ -101,7 +108,7 @@ alias_target('qoob_sx', qoob_sx)
 
 viper = custom_target(
     'viper',
-    input: dols['iplboot'],
+    input: iplboot_dol,
     output: 'iplboot_viper.vgc',
     command: [dol2ipl, '@OUTPUT@', '@INPUT@'],
     build_by_default: true,
@@ -110,7 +117,7 @@ alias_target('viper', viper)
 
 pico = custom_target(
     'pico',
-    input: dols['iplboot'],
+    input: iplboot_dol,
     output: 'iplboot_pico.uf2',
     command: [dol2ipl, '@OUTPUT@', '@INPUT@'],
     build_by_default: true,
@@ -119,7 +126,7 @@ alias_target('pico', pico)
 
 gci = custom_target(
     'gci',
-    input: dols['iplboot_lowmem'],
+    input: iplboot_lowmem_dol,
     output: 'iplboot_memcard.gci',
     command: [dol2gci, '@INPUT@', '@OUTPUT@', 'boot.dol'],
     build_by_default: true,

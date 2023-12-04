@@ -10,7 +10,6 @@ project(
 libogc_proj = subproject(
     'libogc2',
     default_options: {
-        'opt_level': get_option('optimization'),
         'libraries': ['ogc'],
     },
 )

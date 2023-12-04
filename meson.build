@@ -50,7 +50,8 @@ compressed_exes += {
     'iplboot_sx': {
         'exe': iplboot,
         'link_args': [
-            '-Wl,--section-start,.init=0x01500000'
+            '-Wl,--section-start,.init=0x01500000',
+            '-Wl,--nmagic',
         ],
     },
     'iplboot_lowmem': {

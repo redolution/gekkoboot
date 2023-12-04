@@ -72,7 +72,7 @@ foreach name, exe: dols
     dols += {name: dol}
 endforeach
 
-if ipl_rom.length() != 0
+if full_rom_opt.allowed()
     qoob_pro = custom_target(
         'qoob_pro',
         input: [dols['iplboot'], ipl_rom],
@@ -81,8 +81,6 @@ if ipl_rom.length() != 0
         build_by_default: true,
     )
     alias_target('qoob_pro', qoob_pro)
-else
-    warning('IPL ROM not found, building for Qoob Pro will not be possible!')
 endif
 
 sx_exe = compressed_exes['iplboot_sx']['compressed']

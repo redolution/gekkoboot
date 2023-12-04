@@ -26,7 +26,7 @@ jobs:
     - name: Build iplboot
       run: |
         export PATH="$DEVKITPPC/bin:$PATH"
-        meson setup . build --cross-file=devkitPPC.ini
+        meson setup . build --cross-file=devkitPPC.ini -Dfull_rom='enabled'
         ninja -C build
 
     - name: Upload build artifacts

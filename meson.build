@@ -34,6 +34,13 @@ subdir('stub')
 
 linker_script = meson.current_source_dir() / 'ogc.ld'
 
+git = find_program('git')
+version_file = vcs_tag(
+    command: [git, 'describe', '--always', '--tags', '--dirty'],
+    input: 'source/version.c.in',
+    output: 'version.c',
+)
+
 iplboot = executable(
     'iplboot',
     'source/main.c',
@@ -42,6 +49,7 @@ iplboot = executable(
     'source/fatfs/ffsystem.c',
     'source/fatfs/ffunicode.c',
     'source/ffshim.c',
+    version_file,
     dependencies: [
         libogc_deps['ogc'],
         stub_dep,

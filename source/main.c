@@ -10,6 +10,7 @@
 #include "ffshim.h"
 #include "fatfs/ff.h"
 #include "utils.h"
+#include "version.h"
 
 #include "stub.h"
 
@@ -346,7 +347,7 @@ int main()
     VIDEO_WaitVSync();
     CON_Init(__xfb, 0, 0, rmode->fbWidth, rmode->xfbHeight, rmode->fbWidth * VI_DISPLAY_PIX_SZ);
 
-    kprintf("\n\niplboot\n");
+    kprintf("\n\niplboot %s\n", version);
 
     // Disable Qoob
     u32 val = 6 << 24;

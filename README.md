@@ -1,7 +1,6 @@
 # iplboot
 
-A minimal GameCube IPL
-
+A utilitarian bootloader for the GameCube
 
 ## Usage
 
@@ -49,33 +48,51 @@ iplboot also acts as a server for @emukidid's [usb-load](https://github.com/emuk
 
 ## Installation
 
-Download the designated appropriate file for your device from the [latest release](https://github.com/redolution/iplboot/releases/latest).
+Download the designated appropriate file for your device from the [latest release].
 
 Prepare your SD card by copying DOLs onto the SD card and renaming them according the table above.
 
 ### PicoBoot
 
-You can download ready-to-go firmware featuring iplboot directly from the [PicoBoot repo](https://github.com/webhdx/PicoBoot). Just follow the [installation guide](https://github.com/webhdx/PicoBoot/wiki/Installation-guide). This is likely what you want.
+iplboot is bundled with the [PicoBoot] firmware.
+Just follow the [installation guide][pb-install].
 
-Otherwise, use `iplboot.dol` and follow the PicoBoot [compiling firmware](https://github.com/webhdx/PicoBoot/wiki/Compiling-PicoBoot-firmware) instructions to flash your Raspberry Pico.
+You can also update iplboot separately from the PicoBoot firmware,
+using the supplied `iplboot_pico.uf2` (depends on [PicoBoot PR 107][pb-pr-107]).
+
+[PicoBoot]: https://github.com/webhdx/PicoBoot
+[pb-install]: https://github.com/webhdx/PicoBoot/wiki/Installation-guide
+[pb-pr-107]: https://github.com/webhdx/PicoBoot/pull/107
 
 ### Qoob Pro
 
-Flash `iplboot.gcb` to your Qoob Pro as a BIOS.
+Flash `iplboot_qoob_pro.gcb` as a BIOS like you normally would.
 
 ### Qoob SX
 
-Qoob SX is not currently supported due to size constraints.
+- Burn `qoob_sx_iplboot_upgrade.elf` to an ISO9660 DVD.
+- Hold D-Pad left while turning the GameCube on to boot into the "backup" BIOS.
+- Start the updater from there.
 
-The last version available for the Qoob SX is [r5.2](https://github.com/redolution/iplboot/releases/tag/r5.2). Download `qoob_sx_iplboot_upgrade.elf` and flash it to your Qoob SX as a BIOS.
+This appears to be the only way to flash a Qoob SX,
+otherwise write protection is enabled.
+If this is inconvenient, consider upgrading to PicoBoot.
 
 ### ViperGC
 
-Flash `iplboot.vgc` to your ViperGC as a BIOS.
+Flash `iplboot_viper.vgc` as a BIOS like you normally would.
+
+The hardware flasher is recommended, as it will be impossible to reflash the
+Viper without it once iplboot is installed.
+If you've lost it, consider upgrading to PicoBoot.
 
 ### GameCube Memory Card
 
-Use `iplboot_xz.gci` and a GameCube memory card manager such as [GCMM](https://github.com/suloku/gcmm) to copy to your memory card. It will be saved as `boot.dol` and can be used in conjunction with the various [save game exploits](https://www.gc-forever.com/wiki/index.php?title=Booting_homebrew#Game_Save_Exploits).
+Copy `iplboot_memcard.gci` to a memory card using [GCMM] or Swiss.
+It will be saved as `boot.dol` and can be used in conjunction with the various
+[game save exploits](https://www.gc-forever.com/wiki/index.php?title=Booting_homebrew#Game_Save_Exploits).
+
+[GCMM]: https://github.com/suloku/gcmm
 
 
 ## Troubleshooting
@@ -87,63 +104,66 @@ When choosing a shortcut button, beware that some software checks for buttons he
 
 ## Compiling
 
-You should only need to compile if you want to modify to the iplboot source code. Otherwise, you can just download prebuilt binaries from the [latest release](https://github.com/redolution/iplboot/releases/latest).
+You should only need to compile iplboot if you want to modify to the source
+code.
+Otherwise, you can just download prebuilt binaries from the releases tab.
 
-1. Ensure you have the latest version of [devkitPro](https://devkitpro.org/wiki/Getting_Started) installed.
-2. Ensure you have the latest version of [libogc2](https://github.com/extremscorner/libogc2) installed.
-3. Ensure your devkitPro environment variables are set: `DEVKITPRO` and `DEVKITPPC`
-4. Python3 is required.
+Prerequisites:
+- [devkitPPC](https://devkitpro.org/wiki/Getting_Started),
+  the compiler toolchain for GameCube and Wii homebrew
+  (install the gamecube-dev group)  
+  Ensure that the `DEVKITPRO` and `DEVKITPPC` environment variables are set
+  correctly
+- [Git](https://git-scm.com/), for cloning the repo
+- [Meson](https://mesonbuild.com/), the build system
+- [Ninja](https://ninja-build.org/), the build executor
+- [7-Zip](https://www.7-zip.org/) (p7zip), to compress the executable
+- [Python 3](https://www.python.org/), required by build scripts
+- A C++ compiler for your build machine, for some build tools
+- For Qoob Pro: an IPL ROM dump, see below
 
-### PicoBoot
+Note: on Windows, you'll want to install all the dependencies inside of MSYS2.
 
-1. Run `make dol`.
-2. Follow installation instructions above using the newly created `build/iplboot.dol`.
+```console
+# Clone this repo
+$ git clone https://github.com/redolution/iplboot.git
+
+# Initialize the build system
+$ meson setup . build --cross-file=devkitPPC.ini
+
+# Build it!
+$ ninja -C build
+
+# The binaries will be in the build directory
+$ ls build
+...
+iplboot_memcard.gci
+iplboot_pico.uf2
+iplboot_qoob_pro.gcb
+iplboot_viper.vgc
+qoob_sx_iplboot_upgrade.elf
+...
+```
 
 ### Qoob Pro
 
-Qoob Pro requires BS1 (early hardware initialization code) from the original IPL. This can be obtained from an existing Qoob Pro BIOS or any IPL dump.
+Qoob Pro requires BS1 (early initialization code) from the original bootrom.
+This can be obtained from an existing Qoob Pro BIOS or any IPL dump.
 
-To use an existing Qoob Pro BIOS (easiest method):
-1. Download `iplboot.gcb` from the [latest release](https://github.com/redolution/iplboot/releases/latest).
-2. Rename `iplboot.gcb` to `ipl.rom` and place it at the root of this project.
+To use an existing Qoob Pro BIOS (easiest method),
+download `iplboot_qoob_pro.gcb` from the [latest release].
 
 Alternatively, you can dump the IPL ROM from your own GameCube using Swiss:
-1. Ensure file management is enabled in Swiss settings: Press B, select the gear icon at bottom right, press R until you reach "Advanced Settings", scroll down to "File Management", press right to enable, save and exit.
+1. Ensure file management is enabled in Swiss settings: press B, select the gear icon at bottom right, press R until you reach "Advanced Settings", scroll down to "File Management", press right to enable, save and exit.
 2. Switch to the system device: Select the eject icon at bottom left, scroll right to "System", press A.
 3. Scroll down to `ipl.bin`, press Z then X, and copy to your SD card.
-4. Copy `ipl.bin` from your SD card to the root of this project. Rename it to `ipl.rom`.
+4. Copy `ipl.bin` from your SD card to your computer.
 
-You should now have `ipl.rom` at the project root.
+You should now have a suitable IPL ROM.
+1. Rename the file to `ipl.rom` and place it in the `res` directory.
+1. If you've already run `meson setup`,
+   run it again with `--reconfigure` for it to find the file.
+1. The output should now say `Qoob Pro support: YES`.
+1. Continue building normally.
 
-1. Run `make qoobpro`.
-2. Follow installation instructions above using the newly created `build/iplboot.gcb`.
-
-### Qoob SX
-
-NOTE: Qoob SX is currently nonfunctional as the resulting BIOS is too large.
-
-1. Download Qoob BIOS v1.3c `Qoob (1.3c).rar` from this [archive post](https://www.gc-forever.com/forums/viewtopic.php?f=36&t=23) and extract `qoob_sx_13c_upgrade.elf` (MD5: `2292630e7604bc2ae8bfa4d3e4ba5941`) to the root of this project.
-2. Run `make qoobsx`.
-3. Follow installation instructions above using the newly created `build/qoob_sx_iplboot_upgrade.elf`
-
-### Viper
-
-1. Run `make viper`.
-2. Follow installation instructions above using the newly created `build/iplboot.vgc`.
-
-### GameCube Memory Card
-
-1. Run `make gci`.
-2. Follow installation instructions above using the newly created `build/iplboot.gci`.
-
-*Optional:* If you want to reduce the file size by ~50% so it will take up less space on your memory card, you can create a compressed version.
-
-1. Run `make gci_compressed`.
-2. Follow installation instructions above using the newly created `build/iplboot_xz.gci` (Notice the `_xz` suffix).
-
-### Compressed DOL
-
-Should you need it, you can create a compressed version of the base DOL.
-
-1. Run `make dol_compressed`.
-2. Follow installation instructions above using the newly created `build/iplboot_xz.dol` (Notice the `_xz` suffix).
+[latest release]: https://github.com/redolution/iplboot/releases/latest

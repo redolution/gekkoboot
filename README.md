@@ -128,6 +128,9 @@ Note: on Windows, you'll want to install all the dependencies inside of MSYS2.
 # Clone this repo
 $ git clone https://github.com/redolution/iplboot.git
 
+# Ensure devkitPPC is in PATH
+$ export PATH="$DEVKITPPC/bin:$PATH"
+
 # Initialize the build system
 $ meson setup . build --cross-file=devkitPPC.ini
 

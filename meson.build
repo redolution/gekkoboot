@@ -41,6 +41,13 @@ version_file = vcs_tag(
     output: 'version.c',
 )
 
+font = custom_target(
+    'font',
+    input: terminus,
+    output: 'font.c',
+    command: [psf2c, '@INPUT@', '@OUTPUT@', 'console_font_8x16'],
+)
+
 iplboot = executable(
     'iplboot',
     'source/main.c',
@@ -50,6 +57,7 @@ iplboot = executable(
     'source/fatfs/ffunicode.c',
     'source/ffshim.c',
     version_file,
+    font,
     dependencies: [
         libogc_deps['ogc'],
         stub_dep,

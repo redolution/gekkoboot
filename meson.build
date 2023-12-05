@@ -30,18 +30,22 @@ dols = {}
 # executable to `dols`.
 compressed_exes = {}
 
+subdir('stub')
+
 linker_script = meson.current_source_dir() / 'ogc.ld'
 
 iplboot = executable(
     'iplboot',
     'source/main.c',
-    'source/stub.c',
     'source/utils.c',
     'source/fatfs/ff.c',
     'source/fatfs/ffsystem.c',
     'source/fatfs/ffunicode.c',
     'source/ffshim.c',
-    dependencies: libogc_deps['ogc'],
+    dependencies: [
+        libogc_deps['ogc'],
+        stub_dep,
+    ],
     link_args: ['-T' + linker_script],
     link_depends: [linker_script],
     name_suffix: 'elf',

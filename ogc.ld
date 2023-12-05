@@ -91,7 +91,14 @@ SECTIONS
 	PROVIDE (_etext = .);
 	PROVIDE (etext = .);
 
-	.rodata   : { *(.rodata) *(.rodata.*) *(.gnu.linkonce.r.*) } :data
+	.rodata   : {
+		*(.rodata) *(.rodata.*)
+		*(.gnu.linkonce.r.*)
+
+		stub = .;
+		KEEP(*(reloc_stub.data))
+		__stub_end = .;
+	} :data
 	.rodata1   : { *(.rodata1) }
 	.sdata2   : { 
 		PROVIDE(_SDA2_BASE_ = . );
@@ -270,3 +277,7 @@ __Arena1Lo = (__intrstack_addr + 31) & (-32);
 __Arena1Hi = (0x81700000);
 
 __xfb = ((__Arena1Hi + 31) & (-32)) + (0xC0000000 - 0x80000000);
+
+stub_size = __stub_end - stub;
+ASSERT(stub_size > 0, "Relocation stub missing!")
+ASSERT(stub_size <= 0x300, "Relocation stub too big!")

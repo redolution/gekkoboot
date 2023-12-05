@@ -12,8 +12,6 @@
 #include "utils.h"
 
 #include "stub.h"
-#define STUB_ADDR  0x80001000
-#define STUB_STACK 0x80003000
 
 #define VERBOSE_LOGGING 0
 
@@ -450,8 +448,8 @@ load:
         }
     }
 
-    memcpy((void *) STUB_ADDR, stub, stub_size);
-    DCStoreRange((void *) STUB_ADDR, stub_size);
+    memcpy((void *) STUB_ADDR, stub, (size_t) stub_size);
+    DCStoreRange((void *) STUB_ADDR, (u32) stub_size);
 
     delay_exit();
 

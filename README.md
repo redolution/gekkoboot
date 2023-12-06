@@ -11,7 +11,9 @@ iplboot will attempt to load DOLs from the following locations in order:
 - SD Gecko in Card Slot A
 - SD2SP2
 
-You can use button shortcuts to keep alternate software on quick access. When loading from an SD card, iplboot will look for and load different filenames depending on what buttons are being held:
+You can use button shortcuts to keep alternate software on quick access.
+When loading from an SD card, iplboot will look for and load different filenames
+depending on what buttons are being held:
 
  Button Held | File Loaded
 -------------|--------------
@@ -25,23 +27,33 @@ You can use button shortcuts to keep alternate software on quick access. When lo
 
 CLI files are also supported.
 
-If the selected shortcut file cannot be loaded, iplboot will fall back to `/ipl.dol`. If that cannot be loaded either, the next device will be searched. If all fails, iplboot will reboot to the onboard IPL (original GameCube intro and menu).
+If the selected shortcut file cannot be loaded, iplboot will fall back to
+`/ipl.dol`. If that cannot be loaded either, the next device will be searched.
+If all fails, iplboot will reboot to the onboard IPL (original GameCube intro
+and menu).
 
-Holding D-Pad Left or the reset button will skip iplboot functionality and reboot straight into the onboard IPL.
+Holding D-Pad Left or the reset button will skip iplboot functionality and
+reboot straight into the onboard IPL.
 
-For example, this configuration would boot straight into Swiss by default, or GBI if you held B, or the original GameCube intro if you held D-Pad Left:
+For example, this configuration would boot straight into Swiss by default,
+or GBI if you held B, or the original GameCube intro if you held D-Pad Left:
 - `/ipl.dol` - Swiss
 - `/b.dol` - GBI
 
-This configuration would boot into the original GameCube intro by default, or Swiss if you held Z, or GBI if you held B:
+This configuration would boot into the original GameCube intro by default,
+or Swiss if you held Z, or GBI if you held B:
 - `/z.dol` - Swiss
 - `/b.dol` - GBI
 
-**Pro-tip:** You can prevent files from showing in Swiss by marking them as hidden files on the SD card.
+**Pro-tip:** You can prevent files from showing in Swiss by marking them as
+hidden files on the SD card.
 
-If you hold multiple buttons, the highest in the table takes priority. Be careful not to touch any of the analog controls (sticks and triggers) when powering on as this is when they are calibrated.
+If you hold multiple buttons, the highest in the table takes priority.
+Be careful not to touch any of the analog controls (sticks and triggers) when
+powering on as this is when they are calibrated.
 
-iplboot also acts as a server for @emukidid's [usb-load](https://github.com/emukidid/gc-usb-load), should you want to use it for development purposes.
+iplboot also acts as a server for @emukidid's [usb-load](https://github.com/emukidid/gc-usb-load),
+should you want to use it for development purposes.
 
 **Something not working?** See the [troubleshooting section](#troubleshooting).
 
@@ -50,7 +62,8 @@ iplboot also acts as a server for @emukidid's [usb-load](https://github.com/emuk
 
 Download the designated appropriate file for your device from the [latest release].
 
-Prepare your SD card by copying DOLs onto the SD card and renaming them according the table above.
+Prepare your SD card by copying DOLs onto the SD card and renaming them
+according the table above.
 
 ### PicoBoot
 
@@ -107,9 +120,17 @@ It will be saved as `boot.dol` and can be used in conjunction with the various
 
 ## Troubleshooting
 
-iplboot displays useful diagnostic messages as it attempts to load the selected DOL. But it's so fast you may not have time to read or even see them. If you hold the down direction on the D-Pad, the messages will remain on screen until you let go.
+iplboot displays useful diagnostic messages as it attempts to load the selected DOL.
+But it's so fast you may not have time to read or even see them.
+If you hold the down direction on the D-Pad, the messages will remain on screen
+until you let go.
 
-When choosing a shortcut button, beware that some software checks for buttons held at boot to alter certain behaviors. If your software behaves differently when booted through iplboot, ensure the assigned shortcut button is not used in this way. For example, it is not recommended to assign Swiss to the B button as holding B causes Swiss to disable the DVD drive.
+When choosing a shortcut button, beware that some software checks for buttons
+held at boot to alter certain behaviors.
+If your software behaves differently when booted through iplboot, ensure the
+assigned shortcut button is not used in this way.
+For example, it is not recommended to assign Swiss to the B button as holding B
+causes Swiss to disable the DVD drive.
 
 Also on Qoob SX, the "backup" BIOS will run before iplboot, so it may interfere
 with some shortcuts.
@@ -170,8 +191,11 @@ To use an existing Qoob Pro BIOS (easiest method),
 download `iplboot_qoob_pro.gcb` from the [latest release].
 
 Alternatively, you can dump the IPL ROM from your own GameCube using Swiss:
-1. Ensure file management is enabled in Swiss settings: press B, select the gear icon at bottom right, press R until you reach "Advanced Settings", scroll down to "File Management", press right to enable, save and exit.
-2. Switch to the system device: Select the eject icon at bottom left, scroll right to "System", press A.
+1. Ensure file management is enabled in Swiss settings: press B, select the gear
+   icon at bottom right, press R until you reach "Advanced Settings",
+   scroll down to "File Management", press right to enable, save and exit.
+2. Switch to the system device: Select the eject icon at bottom left,
+   scroll right to "System", press A.
 3. Scroll down to `ipl.bin`, press Z then X, and copy to your SD card.
 4. Copy `ipl.bin` from your SD card to your computer.
 

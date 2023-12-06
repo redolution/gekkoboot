@@ -27,7 +27,7 @@ jobs:
       run: |
         export PATH="$DEVKITPPC/bin:$PATH"
         meson setup . build --cross-file=devkitPPC.ini -Dfull_rom='enabled'
-        ninja -C build
+        meson compile -C build
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v3

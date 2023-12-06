@@ -168,7 +168,7 @@ $ export PATH="$DEVKITPPC/bin:$PATH"
 $ meson setup . build --cross-file=devkitPPC.ini
 
 # Build it!
-$ ninja -C build
+$ meson compile -C build
 
 # The binaries will be in the build directory
 $ ls build

@@ -64,19 +64,29 @@ using the supplied `iplboot_pico.uf2` (depends on [PicoBoot PR 107][pb-pr-107]).
 [pb-install]: https://github.com/webhdx/PicoBoot/wiki/Installation-guide
 [pb-pr-107]: https://github.com/webhdx/PicoBoot/pull/107
 
-### Qoob Pro
+### Qoob
 
-Flash `iplboot_qoob_pro.gcb` as a BIOS like you normally would.
+Qoob Pro only: use the Qoob USB flash utility to install `iplboot_qoob_pro.gcb`
+as a BIOS like you normally would.
 
-### Qoob SX
+A modified copy of the updater is also provided for both versions of the Qoob.
+It can be run via Swiss, or the original Qoob BIOS, from an ISO9660 DVD or over
+the nework using a Broadband Adapter[^qoob-bba].
 
-- Burn `qoob_sx_iplboot_upgrade.elf` to an ISO9660 DVD.
-- Hold D-Pad left while turning the GameCube on to boot into the "backup" BIOS.
-- Start the updater from there.
+The updater files are `qoob_pro_iplboot_upgrade.elf` and
+`qoob_sx_iplboot_upgrade.elf` respectively.
+When burning them to a disc, you may need to pad the image with a large (~1GiB)
+file, to ensure the drive can read it properly.
 
-This appears to be the only way to flash a Qoob SX,
-otherwise write protection is enabled.
+The recommended method however is to burn Swiss to a DVD, and run the updater
+from an SD card.
+
+On Qoob SX, you will need to hold D-Pad left while turning the system on to boot
+into the "backup" BIOS, otherwise write protection will be enabled.
+This means that a DVD drive or a BBA is required to flash anyting to a Qoob SX.
 If this is inconvenient, consider upgrading to PicoBoot.
+
+[^qoob-bba]: See the Qoob documentation for more information.
 
 ### ViperGC
 
@@ -101,6 +111,8 @@ iplboot displays useful diagnostic messages as it attempts to load the selected 
 
 When choosing a shortcut button, beware that some software checks for buttons held at boot to alter certain behaviors. If your software behaves differently when booted through iplboot, ensure the assigned shortcut button is not used in this way. For example, it is not recommended to assign Swiss to the B button as holding B causes Swiss to disable the DVD drive.
 
+Also on Qoob SX, the "backup" BIOS will run before iplboot, so it may interfere
+with some shortcuts.
 
 ## Compiling
 
@@ -144,6 +156,7 @@ iplboot_memcard.gci
 iplboot_pico.uf2
 iplboot_qoob_pro.gcb
 iplboot_viper.vgc
+qoob_pro_iplboot_upgrade.elf
 qoob_sx_iplboot_upgrade.elf
 ...
 ```

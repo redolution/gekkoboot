@@ -11,4 +11,5 @@ ipl.rom
 
 /subprojects/libogc2
 
+!res/qoob_pro_none_upgrade.elf
 !res/qoob_sx_13c_upgrade.elf

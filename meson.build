@@ -108,6 +108,13 @@ if full_rom_opt.allowed()
         command: [dol2ipl, '@OUTPUT@', '@INPUT@'],
         build_by_default: true,
     )
+    qoob_pro_updater_tgt = custom_target(
+        'qoob_pro_updater',
+        input: [qoob_pro, qoob_pro_updater],
+        output: 'qoob_pro_iplboot_upgrade.elf',
+        command: [qoob_injector, '@INPUT@', '@OUTPUT@'],
+        build_by_default: true,
+    )
 endif
 
 iplboot_sx_stripped = custom_target(
@@ -118,9 +125,15 @@ iplboot_sx_stripped = custom_target(
 )
 qoob_sx = custom_target(
     'qoob_sx',
-    input: [iplboot_sx_stripped, qoob_sx_updater],
-    output: 'qoob_sx_iplboot_upgrade.elf',
+    input: iplboot_sx_stripped,
+    output: 'iplboot_qoob_sx.qbsx',
     command: [dol2ipl, '@OUTPUT@', '@INPUT@'],
+)
+qoob_sx_updater_tgt = custom_target(
+    'qoob_sx_updater',
+    input: [qoob_sx, qoob_sx_updater],
+    output: 'qoob_sx_iplboot_upgrade.elf',
+    command: [qoob_injector, '@INPUT@', '@OUTPUT@'],
     build_by_default: true,
 )
 

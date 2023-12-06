@@ -114,7 +114,7 @@ def pack_uf2(data, base_address):
 
 def main():
     if len(sys.argv) not in range(3, 4 + 1):
-        print(f"Usage: {sys.argv[0]} <output> <executable> [<IPL ROM>|<SX updater>]")
+        print(f"Usage: {sys.argv[0]} <output> <executable> [<IPL ROM>]")
         return 1
 
     output = sys.argv[1]
@@ -200,33 +200,17 @@ def main():
 
         out = pack_uf2(header + img, 0x10080000)
 
-    elif output.startswith("qoob_sx_"):
-        if len(sys.argv) < 4:
-            print("Missing required updater!")
-            return 1
-
-        updater = sys.argv[3]
-        with open(updater, "rb") as f:
-            out = bytearray(f.read())
-
+    elif output.endswith(".qbsx"):
         # SX BIOSes are always one page long
         qoob_header[0xFD] = 1
 
         img = qoob_header + scramble(exe, qoobsx=True)
 
-        if len(img) > 62800:
-            print("Warning: SX BIOS image too big to fit in flasher")
-            return -1
         if len(img) > 1 << 16:
             print("SX BIOS image too big")
             return -1
 
-        msg = b"QOOB SX iplboot install\0"
-        msg_offset = 7240
-        img_offset = 7404
-
-        out[msg_offset:msg_offset + len(msg)] = msg
-        out[img_offset:img_offset + len(img)] = img
+        out = img
 
     else:
         print("Unknown output format")

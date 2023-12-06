@@ -108,7 +108,6 @@ if full_rom_opt.allowed()
         command: [dol2ipl, '@OUTPUT@', '@INPUT@'],
         build_by_default: true,
     )
-    alias_target('qoob_pro', qoob_pro)
 endif
 
 iplboot_sx_stripped = custom_target(
@@ -124,7 +123,6 @@ qoob_sx = custom_target(
     command: [dol2ipl, '@OUTPUT@', '@INPUT@'],
     build_by_default: true,
 )
-alias_target('qoob_sx', qoob_sx)
 
 viper = custom_target(
     'viper',
@@ -133,7 +131,6 @@ viper = custom_target(
     command: [dol2ipl, '@OUTPUT@', '@INPUT@'],
     build_by_default: true,
 )
-alias_target('viper', viper)
 
 pico = custom_target(
     'pico',
@@ -142,7 +139,6 @@ pico = custom_target(
     command: [dol2ipl, '@OUTPUT@', '@INPUT@'],
     build_by_default: true,
 )
-alias_target('pico', pico)
 
 gci = custom_target(
     'gci',
@@ -151,4 +147,3 @@ gci = custom_target(
     command: [dol2gci, '@INPUT@', '@OUTPUT@', 'boot.dol'],
     build_by_default: true,
 )
-alias_target('gci', gci)

@@ -107,6 +107,8 @@ if full_rom_opt.allowed()
         output: 'iplboot_qoob_pro.gcb',
         command: [dol2ipl, '@OUTPUT@', '@INPUT@'],
         build_by_default: true,
+        install: true,
+        install_dir: '/qoob_pro',
     )
     qoob_pro_updater_tgt = custom_target(
         'qoob_pro_updater',
@@ -114,6 +116,8 @@ if full_rom_opt.allowed()
         output: 'qoob_pro_iplboot_upgrade.elf',
         command: [qoob_injector, '@INPUT@', '@OUTPUT@'],
         build_by_default: true,
+        install: true,
+        install_dir: '/qoob_pro',
     )
 endif
 
@@ -135,6 +139,8 @@ qoob_sx_updater_tgt = custom_target(
     output: 'qoob_sx_iplboot_upgrade.elf',
     command: [qoob_injector, '@INPUT@', '@OUTPUT@'],
     build_by_default: true,
+    install: true,
+    install_dir: '/',
 )
 
 viper = custom_target(
@@ -143,6 +149,8 @@ viper = custom_target(
     output: 'iplboot_viper.vgc',
     command: [dol2ipl, '@OUTPUT@', '@INPUT@'],
     build_by_default: true,
+    install: true,
+    install_dir: '/',
 )
 
 pico = custom_target(
@@ -151,6 +159,8 @@ pico = custom_target(
     output: 'iplboot_pico.uf2',
     command: [dol2ipl, '@OUTPUT@', '@INPUT@'],
     build_by_default: true,
+    install: true,
+    install_dir: '/',
 )
 
 gci = custom_target(
@@ -159,4 +169,8 @@ gci = custom_target(
     output: 'iplboot_memcard.gci',
     command: [dol2gci, '@INPUT@', '@OUTPUT@', 'boot.dol'],
     build_by_default: true,
+    install: true,
+    install_dir: '/',
 )
+
+install_data('README.md', install_dir: '/')

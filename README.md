@@ -60,7 +60,7 @@ should you want to use it for development purposes.
 
 ## Installation
 
-Download the designated appropriate file for your device from the [latest release].
+Download and extract the [latest release].
 
 Prepare your SD card by copying DOLs onto the SD card and renaming them
 according the table above.
@@ -188,7 +188,7 @@ Qoob Pro requires BS1 (early initialization code) from the original bootrom.
 This can be obtained from an existing Qoob Pro BIOS or any IPL dump.
 
 To use an existing Qoob Pro BIOS (easiest method),
-download `iplboot_qoob_pro.gcb` from the [latest release].
+grab `iplboot_qoob_pro.gcb` from the [latest release].
 
 Alternatively, you can dump the IPL ROM from your own GameCube using Swiss:
 1. Ensure file management is enabled in Swiss settings: press B, select the gear

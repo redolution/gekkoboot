@@ -1,4 +1,5 @@
 /build
+/dist
 *.dol
 *.elf
 
@@ -8,6 +9,7 @@ ipl.rom
 *.vgc
 *.bin
 *.gci
+*.zip
 
 /subprojects/libogc2
 

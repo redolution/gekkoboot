@@ -78,8 +78,8 @@ compressed_exes += {
         'exe': iplboot,
         'link_args': [
             '-Wl,--section-start,.init=0x01500000',
-            '-Wl,--nmagic',
         ],
+        'dol': true,
     },
     'iplboot_lowmem': {
         'exe': iplboot,
@@ -121,15 +121,15 @@ if full_rom_opt.allowed()
     )
 endif
 
-iplboot_sx_stripped = custom_target(
-    iplboot_sx_compressed.name() + '_stripped',
-    input: iplboot_sx_compressed,
-    output: iplboot_sx_compressed.name() + '_stripped.elf',
-    command: [objcopy, '-S', '@INPUT@', '@OUTPUT@'],
+iplboot_sx_elf = custom_target(
+    'iplboot_sx_final',
+    input: iplboot_sx_dol,
+    output: 'iplboot_sx.elf',
+    command: [doltool, '-e', '@INPUT@'],
 )
 qoob_sx = custom_target(
     'qoob_sx',
-    input: iplboot_sx_stripped,
+    input: iplboot_sx_elf,
     output: 'iplboot_qoob_sx.qbsx',
     command: [dol2ipl, '@OUTPUT@', '@INPUT@'],
 )

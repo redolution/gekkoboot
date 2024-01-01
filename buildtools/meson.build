@@ -8,3 +8,5 @@ dol2gci = executable(
     'dol2gci.cpp',
     native: true,
 )
+
+subdir('doltool')

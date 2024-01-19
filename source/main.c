@@ -336,6 +336,20 @@ void delay_exit() {
 
 int main()
 {
+    // GCVideo takes a while to boot up.
+    // If VIDEO_GetPreferredMode is called before it's done,
+    // it will not see the "component cable", and default to interlaced mode,
+    // causing extraneous mode switches in the chainloaded application.
+    u64 start = gettime();
+    if (SYS_GetProgressiveScan()) {
+        while (!VIDEO_HaveComponentCable()) {
+            if (diff_sec(start, gettime()) >= 1) {
+                SYS_SetProgressiveScan(0);
+                break;
+            }
+        }
+    }
+
     VIDEO_Init();
     PAD_Init();
     GXRModeObj *rmode = VIDEO_GetPreferredMode(NULL);

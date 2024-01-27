@@ -79,6 +79,16 @@ using the supplied `iplboot_pico.uf2` (depends on [PicoBoot PR 107][pb-pr-107]).
 
 ### Qoob
 
+> [!WARNING]
+> Qoob SX support is considered broken.
+> It works fairly differently from all the other modchips,
+> and I don't have one to test with.
+> If you'd like to donate one for development purposes,
+> open an issue and we can work something out.\
+> Otherwise, consider switching to PicoBoot.
+>
+> Qoob Pro works great and is what I use in my main GameCube.
+
 Qoob Pro only: use the Qoob USB flash utility to install `iplboot_qoob_pro.gcb`
 as a BIOS like you normally would.
 

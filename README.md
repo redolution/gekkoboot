@@ -79,17 +79,6 @@ using the supplied `iplboot_pico.uf2` (depends on [PicoBoot PR 107][pb-pr-107]).
 
 ### Qoob
 
-> [!WARNING]
-> Qoob SX support is considered broken.
-> It works fairly differently from all the other modchips,
-> and I don't have one to test with.
-> ~~If you'd like to donate one for development purposes,
-> open an issue and we can work something out.\
-> Otherwise, consider switching to PicoBoot.~~\
-> webhdx has generously provided one, so this is getting fixed sooner or later.
->
-> Qoob Pro works great and is what I use in my main GameCube.
-
 Qoob Pro only: use the Qoob USB flash utility to install `iplboot_qoob_pro.gcb`
 as a BIOS like you normally would.
 
@@ -107,8 +96,14 @@ from an SD card.
 
 On Qoob SX, you will need to hold D-Pad left while turning the system on to boot
 into the "backup" BIOS, otherwise write protection will be enabled.
-This means that a DVD drive or a BBA is required to flash anyting to a Qoob SX.
+This means that a DVD drive or a BBA is required to flash anyting to a Qoob SX.\
 If this is inconvenient, consider upgrading to PicoBoot.
+
+> [!TIP]
+> Alternatively, if iplboot is already installed, or you have access to another
+> boot method, you can disconnect the modchip from its cable and reconnect it
+> while the system is running.
+> This will disable write protection, and you can run the updater from there.
 
 [^qoob-bba]: See the Qoob documentation for more information.
 
@@ -155,7 +150,7 @@ Otherwise, you can just download prebuilt binaries from the releases tab.
 Prerequisites:
 - [devkitPPC](https://devkitpro.org/wiki/Getting_Started),
   the compiler toolchain for GameCube and Wii homebrew
-  (install the gamecube-dev group)  
+  (install the gamecube-dev group)\
   Ensure that the `DEVKITPRO` and `DEVKITPPC` environment variables are set
   correctly
 - [Git](https://git-scm.com/), for cloning the repo

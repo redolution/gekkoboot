@@ -77,7 +77,12 @@ compressed_exes += {
     'iplboot_sx': {
         'exe': iplboot,
         'link_args': [
-            '-Wl,--section-start,.init=0x01500000',
+            # This is the same entry point as the original BIOS,
+            # but the recovery slot hangs on "starting flashed app..."
+            # when loading it. A lowmem image works just fine.
+            #'-Wl,--section-start,.init=0x01500000',
+
+            # Makes the ELF smaller so it actually fits
             '-Wl,--nmagic',
         ],
     },

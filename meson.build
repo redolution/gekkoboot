@@ -1,5 +1,5 @@
 project(
-    'iplboot',
+    'gekkoboot',
     ['c', 'cpp'],
     meson_version: '>=1.2',
     default_options: {
@@ -48,8 +48,8 @@ font = custom_target(
     command: [psf2c, '@INPUT@', '@OUTPUT@', 'console_font_8x16'],
 )
 
-iplboot = executable(
-    'iplboot',
+gekkoboot = executable(
+    'gekkoboot',
     'source/main.c',
     'source/utils.c',
     'source/fatfs/ff.c',
@@ -67,15 +67,15 @@ iplboot = executable(
     name_suffix: 'elf',
 )
 compressed_exes += {
-    'iplboot': {
-        'exe': iplboot,
+    'gekkoboot': {
+        'exe': gekkoboot,
         'link_args': [
             '-Wl,--section-start,.init=0x01300000'
         ],
         'dol': true,
     },
-    'iplboot_sx': {
-        'exe': iplboot,
+    'gekkoboot_sx': {
+        'exe': gekkoboot,
         'link_args': [
             # This is the same entry point as the original BIOS,
             # but the recovery slot hangs on "starting flashed app..."
@@ -86,8 +86,8 @@ compressed_exes += {
             '-Wl,--nmagic',
         ],
     },
-    'iplboot_lowmem': {
-        'exe': iplboot,
+    'gekkoboot_lowmem': {
+        'exe': gekkoboot,
         'dol': true,
     },
 }
@@ -108,8 +108,8 @@ endforeach
 if full_rom_opt.allowed()
     qoob_pro = custom_target(
         'qoob_pro',
-        input: [iplboot_dol, ipl_rom],
-        output: 'iplboot_qoob_pro.gcb',
+        input: [gekkoboot_dol, ipl_rom],
+        output: 'gekkoboot_qoob_pro.gcb',
         command: [dol2ipl, '@OUTPUT@', '@INPUT@'],
         build_by_default: true,
         install: true,
@@ -118,7 +118,7 @@ if full_rom_opt.allowed()
     qoob_pro_updater_tgt = custom_target(
         'qoob_pro_updater',
         input: [qoob_pro, qoob_pro_updater],
-        output: 'qoob_pro_iplboot_upgrade.elf',
+        output: 'qoob_pro_gekkoboot_upgrade.elf',
         command: [qoob_injector, '@INPUT@', '@OUTPUT@'],
         build_by_default: true,
         install: true,
@@ -126,22 +126,22 @@ if full_rom_opt.allowed()
     )
 endif
 
-iplboot_sx_stripped = custom_target(
-    iplboot_sx_compressed.name() + '_stripped',
-    input: iplboot_sx_compressed,
-    output: iplboot_sx_compressed.name() + '_stripped.elf',
+gekkoboot_sx_stripped = custom_target(
+    gekkoboot_sx_compressed.name() + '_stripped',
+    input: gekkoboot_sx_compressed,
+    output: gekkoboot_sx_compressed.name() + '_stripped.elf',
     command: [objcopy, '-S', '@INPUT@', '@OUTPUT@'],
 )
 qoob_sx = custom_target(
     'qoob_sx',
-    input: iplboot_sx_stripped,
-    output: 'iplboot_qoob_sx.qbsx',
+    input: gekkoboot_sx_stripped,
+    output: 'gekkoboot_qoob_sx.qbsx',
     command: [dol2ipl, '@OUTPUT@', '@INPUT@'],
 )
 qoob_sx_updater_tgt = custom_target(
     'qoob_sx_updater',
     input: [qoob_sx, qoob_sx_updater],
-    output: 'qoob_sx_iplboot_upgrade.elf',
+    output: 'qoob_sx_gekkoboot_upgrade.elf',
     command: [qoob_injector, '@INPUT@', '@OUTPUT@'],
     build_by_default: true,
     install: true,
@@ -150,8 +150,8 @@ qoob_sx_updater_tgt = custom_target(
 
 viper = custom_target(
     'viper',
-    input: iplboot_dol,
-    output: 'iplboot_viper.vgc',
+    input: gekkoboot_dol,
+    output: 'gekkoboot_viper.vgc',
     command: [dol2ipl, '@OUTPUT@', '@INPUT@'],
     build_by_default: true,
     install: true,
@@ -160,8 +160,8 @@ viper = custom_target(
 
 pico = custom_target(
     'pico',
-    input: iplboot_dol,
-    output: 'iplboot_pico.uf2',
+    input: gekkoboot_dol,
+    output: 'gekkoboot_pico.uf2',
     command: [dol2ipl, '@OUTPUT@', '@INPUT@'],
     build_by_default: true,
     install: true,
@@ -170,8 +170,8 @@ pico = custom_target(
 
 gci = custom_target(
     'gci',
-    input: iplboot_lowmem_dol,
-    output: 'iplboot_memcard.gci',
+    input: gekkoboot_lowmem_dol,
+    output: 'gekkoboot_memcard.gci',
     command: [dol2gci, '@INPUT@', '@OUTPUT@', 'boot.dol'],
     build_by_default: true,
     install: true,

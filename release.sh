@@ -4,10 +4,10 @@ set -e
 
 distdir=$PWD/dist
 builddir=$distdir/build
-destdir=$distdir/iplboot
+destdir=$distdir/gekkoboot
 
 version=$(git describe --always --tags --dirty)
-distfile=iplboot-$version.zip
+distfile=gekkoboot-$version.zip
 
 rm -rf "$distdir" "$distfile"
 

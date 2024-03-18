@@ -139,7 +139,7 @@ def main():
         print("Unknown input format")
         return -1
 
-    qoob_header = bytearray(b"(C) iplboot".ljust(256, b"\x00"))
+    qoob_header = bytearray(b"(C) gekkoboot".ljust(256, b"\x00"))
 
     if output.endswith(".gcb"):
         if len(sys.argv) < 4:
@@ -174,7 +174,7 @@ def main():
             print("Invalid entry point and base address (must be 0x81300000)")
             return -1
 
-        header = b"VIPR\x00\x02".ljust(16, b"\x00") + b"iplboot".ljust(16, b"\x00")
+        header = b"VIPR\x00\x02".ljust(16, b"\x00") + b"gekkoboot".ljust(16, b"\x00")
         out = header + scramble(bytearray(0x720) + img)[0x720:]
 
     elif output.endswith(".uf2"):

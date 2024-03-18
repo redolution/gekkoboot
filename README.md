@@ -1,10 +1,10 @@
-# iplboot
+# gekkoboot
 
 A utilitarian bootloader for the GameCube
 
 ## Usage
 
-iplboot will attempt to load DOLs from the following locations in order:
+gekkoboot will attempt to load DOLs from the following locations in order:
 - USB Gecko in Card Slot B
 - SD Gecko in Card Slot B
 - USB Gecko in Card Slot A
@@ -12,7 +12,7 @@ iplboot will attempt to load DOLs from the following locations in order:
 - SD2SP2
 
 You can use button shortcuts to keep alternate software on quick access.
-When loading from an SD card, iplboot will look for and load different filenames
+When loading from an SD card, gekkoboot will look for and load different filenames
 depending on what buttons are being held:
 
  Button Held | File Loaded
@@ -27,12 +27,12 @@ depending on what buttons are being held:
 
 CLI files are also supported.
 
-If the selected shortcut file cannot be loaded, iplboot will fall back to
+If the selected shortcut file cannot be loaded, gekkoboot will fall back to
 `/ipl.dol`. If that cannot be loaded either, the next device will be searched.
-If all fails, iplboot will reboot to the onboard IPL (original GameCube intro
+If all fails, gekkoboot will reboot to the onboard IPL (original GameCube intro
 and menu).
 
-Holding D-Pad Left or the reset button will skip iplboot functionality and
+Holding D-Pad Left or the reset button will skip gekkoboot functionality and
 reboot straight into the onboard IPL.
 
 For example, this configuration would boot straight into Swiss by default,
@@ -52,7 +52,7 @@ If you hold multiple buttons, the highest in the table takes priority.
 Be careful not to touch any of the analog controls (sticks and triggers) when
 powering on as this is when they are calibrated.
 
-iplboot also acts as a server for @emukidid's [usb-load](https://github.com/emukidid/gc-usb-load),
+gekkoboot also acts as a server for @emukidid's [usb-load](https://github.com/emukidid/gc-usb-load),
 should you want to use it for development purposes.
 
 **Something not working?** See the [troubleshooting section](#troubleshooting).
@@ -67,11 +67,11 @@ according the table above.
 
 ### PicoBoot
 
-iplboot is bundled with the [PicoBoot] firmware.
+gekkoboot is bundled with the [PicoBoot] firmware.
 Just follow the [installation guide][pb-install].
 
-You can also update iplboot separately from the PicoBoot firmware,
-using the supplied `iplboot_pico.uf2` (depends on [PicoBoot PR 107][pb-pr-107]).
+You can also update gekkoboot separately from the PicoBoot firmware,
+using the supplied `gekkoboot_pico.uf2` (depends on [PicoBoot PR 107][pb-pr-107]).
 
 [PicoBoot]: https://github.com/webhdx/PicoBoot
 [pb-install]: https://github.com/webhdx/PicoBoot/wiki/Installation-guide
@@ -79,15 +79,15 @@ using the supplied `iplboot_pico.uf2` (depends on [PicoBoot PR 107][pb-pr-107]).
 
 ### Qoob
 
-Qoob Pro only: use the Qoob USB flash utility to install `iplboot_qoob_pro.gcb`
+Qoob Pro only: use the Qoob USB flash utility to install `gekkoboot_qoob_pro.gcb`
 as a BIOS like you normally would.
 
 A modified copy of the updater is also provided for both versions of the Qoob.
 It can be run via Swiss, or the original Qoob BIOS, from an ISO9660 DVD or over
 the nework using a Broadband Adapter[^qoob-bba].
 
-The updater files are `qoob_pro_iplboot_upgrade.elf` and
-`qoob_sx_iplboot_upgrade.elf` respectively.
+The updater files are `qoob_pro_gekkoboot_upgrade.elf` and
+`qoob_sx_gekkoboot_upgrade.elf` respectively.
 When burning them to a disc, you may need to pad the image with a large (~1GiB)
 file, to ensure the drive can read it properly.
 
@@ -100,7 +100,7 @@ This means that a DVD drive or a BBA is required to flash anyting to a Qoob SX.\
 If this is inconvenient, consider upgrading to PicoBoot.
 
 > [!TIP]
-> Alternatively, if iplboot is already installed, or you have access to another
+> Alternatively, if gekkoboot is already installed, or you have access to another
 > boot method, you can disconnect the modchip from its cable and reconnect it
 > while the system is running.
 > This will disable write protection, and you can run the updater from there.
@@ -109,15 +109,15 @@ If this is inconvenient, consider upgrading to PicoBoot.
 
 ### ViperGC
 
-Flash `iplboot_viper.vgc` as a BIOS like you normally would.
+Flash `gekkoboot_viper.vgc` as a BIOS like you normally would.
 
 The hardware flasher is recommended, as it will be impossible to reflash the
-Viper without it once iplboot is installed.
+Viper without it once gekkoboot is installed.
 If you've lost it, consider upgrading to PicoBoot.
 
 ### GameCube Memory Card
 
-Copy `iplboot_memcard.gci` to a memory card using [GCMM] or Swiss.
+Copy `gekkoboot_memcard.gci` to a memory card using [GCMM] or Swiss.
 It will be saved as `boot.dol` and can be used in conjunction with the various
 [game save exploits](https://www.gc-forever.com/wiki/index.php?title=Booting_homebrew#Game_Save_Exploits).
 
@@ -126,24 +126,24 @@ It will be saved as `boot.dol` and can be used in conjunction with the various
 
 ## Troubleshooting
 
-iplboot displays useful diagnostic messages as it attempts to load the selected DOL.
+gekkoboot displays useful diagnostic messages as it attempts to load the selected DOL.
 But it's so fast you may not have time to read or even see them.
 If you hold the down direction on the D-Pad, the messages will remain on screen
 until you let go.
 
 When choosing a shortcut button, beware that some software checks for buttons
 held at boot to alter certain behaviors.
-If your software behaves differently when booted through iplboot, ensure the
+If your software behaves differently when booted through gekkoboot, ensure the
 assigned shortcut button is not used in this way.
 For example, it is not recommended to assign Swiss to the B button as holding B
 causes Swiss to disable the DVD drive.
 
-Also on Qoob SX, the "backup" BIOS will run before iplboot, so it may interfere
+Also on Qoob SX, the "backup" BIOS will run before gekkoboot, so it may interfere
 with some shortcuts.
 
 ## Compiling
 
-You should only need to compile iplboot if you want to modify to the source
+You should only need to compile gekkoboot if you want to modify to the source
 code.
 Otherwise, you can just download prebuilt binaries from the releases tab.
 
@@ -165,7 +165,7 @@ Note: on Windows, you'll want to install all the dependencies inside of MSYS2.
 
 ```console
 # Clone this repo
-$ git clone https://github.com/redolution/iplboot.git
+$ git clone https://github.com/redolution/gekkoboot.git
 
 # Ensure devkitPPC is in PATH
 $ export PATH="$DEVKITPPC/bin:$PATH"
@@ -179,12 +179,12 @@ $ meson compile -C build
 # The binaries will be in the build directory
 $ ls build
 ...
-iplboot_memcard.gci
-iplboot_pico.uf2
-iplboot_qoob_pro.gcb
-iplboot_viper.vgc
-qoob_pro_iplboot_upgrade.elf
-qoob_sx_iplboot_upgrade.elf
+gekkoboot_memcard.gci
+gekkoboot_pico.uf2
+gekkoboot_qoob_pro.gcb
+gekkoboot_viper.vgc
+qoob_pro_gekkoboot_upgrade.elf
+qoob_sx_gekkoboot_upgrade.elf
 ...
 ```
 
@@ -194,7 +194,7 @@ Qoob Pro requires BS1 (early initialization code) from the original bootrom.
 This can be obtained from an existing Qoob Pro BIOS or any IPL dump.
 
 To use an existing Qoob Pro BIOS (easiest method),
-grab `iplboot_qoob_pro.gcb` from the [latest release].
+grab `gekkoboot_qoob_pro.gcb` from the [latest release].
 
 Alternatively, you can dump the IPL ROM from your own GameCube using Swiss:
 1. Ensure file management is enabled in Swiss settings: press B, select the gear
@@ -212,4 +212,4 @@ You should now have a suitable IPL ROM.
 1. The output should now say `Qoob Pro support: YES`.
 1. Continue building normally.
 
-[latest release]: https://github.com/redolution/iplboot/releases/latest
+[latest release]: https://github.com/redolution/gekkoboot/releases/latest

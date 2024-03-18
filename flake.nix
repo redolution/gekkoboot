@@ -41,7 +41,7 @@
               , p7zip
               , python3
               }: mkShell {
-                name = "iplboot";
+                name = "gekkoboot";
                 nativeBuildInputs = [
                   # The cross toolchain
                   devkitPPC

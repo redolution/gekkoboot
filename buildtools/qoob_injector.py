@@ -18,7 +18,7 @@ if bios.endswith(".gcb"):
     if len(img) > 128 * 1024:
         raise "Qoob Pro BIOS image too big to fit in flasher"
 
-    msg = b"QOOB Pro iplboot install\0"
+    msg = b"gekkoboot for QOOB Pro\0"
     msg_offset = 0x1A68
     img_offset = 0x1AE0
 
@@ -26,7 +26,7 @@ if bios.endswith(".qbsx"):
     if len(img) > 62800:
         raise "Qoob SX BIOS image too big to fit in flasher"
 
-    msg = b"QOOB SX iplboot install\0"
+    msg = b"gekkoboot for QOOB SX\0"
     msg_offset = 7240
     img_offset = 7404
 

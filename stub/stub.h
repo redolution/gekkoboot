@@ -7,3 +7,4 @@
 
 extern const uint8_t stub[];
 extern const uint8_t stub_size[];
+extern void stub_main(const void *buf, size_t buflen, const void *arg, size_t arglen);

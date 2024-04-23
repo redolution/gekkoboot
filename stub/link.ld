@@ -1,21 +1,23 @@
-OUTPUT_FORMAT("elf32-powerpc")
-OUTPUT_ARCH(powerpc:common)
-ENTRY(not_main)
-
-PHDRS
+MEMORY
 {
-	stub PT_LOAD FLAGS(5);
-	text PT_LOAD FLAGS(5);
-	data PT_LOAD FLAGS(6);
-	bss  PT_LOAD FLAGS(6);
+	STUB(RWX) : ORIGIN = 0x80001000, LENGTH = 0x2000
+	MRAM(RWX) : ORIGIN = etext, LENGTH = 0x2000
 }
 
 SECTIONS
 {
-	. = ALIGN(32);
-	.text :
+	.stub :
 	{
-		*(.text.not_main)
-		*(.text .text.*)
-	} : text
+		stub = .;
+		*(.stub) *(.stub.*)
+
+		/*
+		KEEP(*(reloc_stub.data))
+		*/
+		__stub_end = .;
+	} > STUB AT> MRAM
 }
+/*INSERT AFTER .text;*/
+
+stub_size = __stub_end - stub;
+ASSERT(stub_size <= 0x300, "Relocation stub too big!")

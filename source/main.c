@@ -470,6 +470,6 @@ load:
     SYS_ResetSystem(SYS_SHUTDOWN, 0, FALSE);
     SYS_SwitchFiber((intptr_t) dol, 0,
                     (intptr_t) dolargs.commandLine, dolargs.length,
-                    STUB_ADDR, STUB_STACK);
+                    stub_main, STUB_STACK);
     return 0;
 }

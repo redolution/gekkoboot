@@ -18,7 +18,7 @@ typedef struct {
 	void (*entrypoint)(void);
 } dol_header_t;
 
-static void memsync(void *buf, size_t size)
+__attribute__((section(".stub"))) static void memsync(void *buf, size_t size)
 {
 	uint8_t *b = buf;
 	size_t i;
@@ -27,7 +27,7 @@ static void memsync(void *buf, size_t size)
 		asm("dcbst %y0" :: "Z" (b[i]));
 }
 
-static void memzero(void *buf, size_t size)
+__attribute__((section(".stub"))) static void memzero(void *buf, size_t size)
 {
 	uint8_t *b = buf;
 	uint8_t *e = b + size;
@@ -36,7 +36,7 @@ static void memzero(void *buf, size_t size)
 		*b++ = '\0';
 }
 
-static void *memmove(void *dest, const void *src, size_t size)
+__attribute__((section(".stub"))) static void *memmove(void *dest, const void *src, size_t size)
 {
 	uint8_t *d = dest;
 	const uint8_t *s = src;
@@ -54,10 +54,7 @@ static void *memmove(void *dest, const void *src, size_t size)
 	return dest;
 }
 
-// Workaround for GCC bug 5372 – [powerpc-*-eabi] -mno-eabi not working
-// https://gcc.gnu.org/bugzilla/show_bug.cgi?id=5372
-// Entry point can't be called main or GCC will insert a call to __eabi
-__attribute__((noreturn)) void not_main(const void *buf, size_t buflen, const void *arg, size_t arglen)
+__attribute__((noreturn, section(".stub"))) void stub_main(const void *buf, size_t buflen, const void *arg, size_t arglen)
 {
 	dol_header_t header;
 	uint32_t *entrypoint;

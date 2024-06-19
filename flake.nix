@@ -38,7 +38,8 @@
               , gamecube-tools
               , meson
               , ninja
-              , p7zip
+              , xz
+              , zip
               , python3
               }: mkShell {
                 name = "gekkoboot";
@@ -51,7 +52,7 @@
                   meson ninja
 
                   # Compressing binaries and the release archive
-                  p7zip
+                  xz zip
 
                   # For build scripts
                   python3

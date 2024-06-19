@@ -27,7 +27,7 @@ packer_stub = static_library(
 packer_linker_script = meson.current_source_dir() / 'link.ld'
 
 stat = find_program('stat')
-seven_zip = find_program('7z')
+xz = find_program('xz')
 
 foreach name, exe: compressed_exes
     bin = custom_target(
@@ -50,7 +50,7 @@ foreach name, exe: compressed_exes
         input: bin,
         output: name + '.bin.xz',
         capture: true,
-        command: [seven_zip, 'a', 'dummy.xz', '-so', '@INPUT@', '-mf=ppc', '-mx=9'],
+        command: [xz, '--powerpc', '--lzma2=preset=9', '@INPUT@', '--stdout'],
     )
 
     bin_xz_o = custom_target(

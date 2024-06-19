@@ -156,7 +156,7 @@ Prerequisites:
 - [Git](https://git-scm.com/), for cloning the repo
 - [Meson](https://mesonbuild.com/), the build system
 - [Ninja](https://ninja-build.org/), the build executor
-- [7-Zip](https://www.7-zip.org/) (p7zip), to compress the executable
+- [XZ Utils](https://tukaani.org/xz/), to compress the executable
 - [Python 3](https://www.python.org/), required by build scripts
 - A C++ compiler for your build machine, for some build tools
 - For Qoob Pro: an IPL ROM dump, see below

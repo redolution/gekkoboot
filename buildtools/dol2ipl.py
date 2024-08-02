@@ -99,7 +99,7 @@ def pack_uf2(data, base_address):
             0x9E5D5157, # Magic 2
             0x00002000, # Flags (family ID present)
             addr,
-            len(chunk),
+            chunk_size,
             seq,
             total_chunks,
             0xE48BFF56, # Board family: Raspberry Pi RP2040

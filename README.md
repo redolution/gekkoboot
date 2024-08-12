@@ -2,6 +2,12 @@
 
 A utilitarian bootloader for the GameCube
 
+Supported targets:
+- PicoBoot
+- Qoob Pro and Qoob SX
+- ViperGC and ViperGC Extreme
+- Savegame exploits
+
 ## Usage
 
 gekkoboot will attempt to load DOLs from the following locations in order:

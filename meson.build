@@ -178,4 +178,14 @@ gci = custom_target(
     install_dir: '/',
 )
 
+apploader = custom_target(
+    'apploader',
+    input: gekkoboot_dol,
+    output: 'apploader.img',
+    command: [dol2ipl, '@OUTPUT@', '@INPUT@'],
+    build_by_default: true,
+    install: true,
+    install_dir: '/swiss_igr/swiss/patches',
+)
+
 install_data('README.md', install_dir: '/')

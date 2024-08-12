@@ -7,6 +7,7 @@ Supported targets:
 - Qoob Pro and Qoob SX
 - ViperGC and ViperGC Extreme
 - Savegame exploits
+- Swiss in-game reset (IGR)
 
 ## Usage
 
@@ -129,6 +130,16 @@ It will be saved as `boot.dol` and can be used in conjunction with the various
 
 [GCMM]: https://github.com/suloku/gcmm
 
+### Swiss in-game reset (IGR)
+
+1. Copy the contents of the `swiss_igr` folder to your SD card,
+   retaining the directory structure.
+1. In Swiss, go to global game settings, and set in-game reset to "Apploader".
+
+> [!NOTE]
+> When using a Qoob, the recommended IGR mode is "Reboot".
+> Swiss will re-enable the modchip and do a hard reset,
+> triggering the usual boot process.
 
 ## Troubleshooting
 

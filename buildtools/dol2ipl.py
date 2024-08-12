@@ -3,6 +3,7 @@
 import math
 import struct
 import sys
+import zlib
 
 # bootrom descrambler reversed by segher
 def scramble(data, *, qoobsx=False):
@@ -211,6 +212,25 @@ def main():
             return -1
 
         out = img
+
+    elif output.endswith(".img"):
+        if entry != 0x81300000 or load != 0x01300000:
+            print("Invalid entry point and base address (must be 0x81300000)")
+            return -1
+
+        date = "*gekkoboot"
+        assert date < "2004/02/01"
+
+        header_size = 32
+        header = struct.pack(
+            "> 16s 8x I I",
+            str.encode(date),
+            len(img),
+            zlib.crc32(img)
+        )
+        assert len(header) == header_size
+
+        out = header + img
 
     else:
         print("Unknown output format")

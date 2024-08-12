@@ -75,14 +75,14 @@ according the table above.
 ### PicoBoot
 
 gekkoboot is bundled with the [PicoBoot] firmware.
-Just follow the [installation guide][pb-install].
+Just follow the [update guide][pb-update].
 
 You can also update gekkoboot separately from the PicoBoot firmware,
-using the supplied `gekkoboot_pico.uf2` (depends on [PicoBoot PR 107][pb-pr-107]).
+using the supplied `gekkoboot_pico.uf2`, and following the same procedure
+(requires PicoBoot 0.4 or later).
 
 [PicoBoot]: https://github.com/webhdx/PicoBoot
-[pb-install]: https://github.com/webhdx/PicoBoot/wiki/Installation-guide
-[pb-pr-107]: https://github.com/webhdx/PicoBoot/pull/107
+[pb-update]: https://support.webhdx.dev/gc/picoboot/update-picoboot
 
 ### Qoob
 

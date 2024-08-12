@@ -104,7 +104,8 @@ from an SD card.
 On Qoob SX, you will need to hold D-Pad left while turning the system on to boot
 into the "backup" BIOS, otherwise write protection will be enabled.
 This means that a DVD drive or a BBA is required to flash anyting to a Qoob SX.\
-If this is inconvenient, consider upgrading to PicoBoot.
+~~If this is inconvenient, consider upgrading to PicoBoot.~~
+This will be improved in a future release.
 
 > [!TIP]
 > Alternatively, if gekkoboot is already installed, or you have access to another
@@ -116,11 +117,20 @@ If this is inconvenient, consider upgrading to PicoBoot.
 
 ### ViperGC
 
+> [!IMPORTANT]
+> ViperGC is the most limited modchip family.
+> Because of its design, it's incapable of overriding BS1 or communicating with
+> software after the initial boot.\
+> This means that support is considered best-effort,
+> and some upcoming features may never be available for Viper.
+>
+> Please consider upgrading to PicoBoot.
+
 Flash `gekkoboot_viper.vgc` as a BIOS like you normally would.
 
-The hardware flasher is recommended, as it will be impossible to reflash the
-Viper without it once gekkoboot is installed.
-If you've lost it, consider upgrading to PicoBoot.
+The hardware flasher is recommended, as it is required to recover from bricks,
+and there is no way to update gekkoboot via software after the initial installation.\
+Software flashing is planned.
 
 ### GameCube Memory Card
 

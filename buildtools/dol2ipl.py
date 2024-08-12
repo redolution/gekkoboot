@@ -94,7 +94,7 @@ def pack_uf2(data, base_address):
         data = data[chunk_size:]
 
         ret += struct.pack(
-            "< 8I 476B I",
+            "< 8I 476s I",
             0x0A324655, # Magic 1 "UF2\n"
             0x9E5D5157, # Magic 2
             0x00002000, # Flags (family ID present)
@@ -103,7 +103,7 @@ def pack_uf2(data, base_address):
             seq,
             total_chunks,
             0xE48BFF56, # Board family: Raspberry Pi RP2040
-            *chunk.ljust(476, b"\x00"),
+            chunk,
             0x0AB16F30, # Final magic
         )
 
@@ -192,8 +192,8 @@ def main():
 
         header_size = 32
         header = struct.pack(
-            "> 8B I 20x",
-            *b"IPLBOOT ",
+            "> 8s I 20x",
+            b"IPLBOOT ",
             len(img) + header_size,
         )
         assert len(header) == header_size

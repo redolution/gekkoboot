@@ -67,7 +67,7 @@ void load_parse_cli(char *path)
     path[path_length - 1] = 'i';
 
     kprintf("Reading %s\n", path);
-    FIL file;
+    FIL file ATTRIBUTE_ALIGN (32);
     FRESULT result = f_open(&file, path, FA_READ);
     if (result != FR_OK)
     {
@@ -172,7 +172,7 @@ int load_fat(const char *slot_name, const DISC_INTERFACE *iface_, char **paths, 
     {
         char *path = paths[i];
         kprintf("Reading %s\n", path);
-        FIL file;
+        FIL file ATTRIBUTE_ALIGN (32);
         FRESULT open_result = f_open(&file, path, FA_READ);
         if (open_result != FR_OK)
         {
@@ -413,6 +413,8 @@ int main()
     if (load_fat("sda", &__io_gcsda, paths, num_paths)) goto load;
 
     if (load_fat("sd2", &__io_gcsd2, paths, num_paths)) goto load;
+
+    if (load_fat("gcl", &__io_gcode, paths, num_paths)) goto load;
 
 load:
     if (!dol)

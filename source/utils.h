@@ -3,6 +3,7 @@
 
 #include "fatfs/ff.h"
 
-extern char *get_fresult_message(FRESULT result);
+extern char *
+get_fresult_message(FRESULT result);
 
 #endif

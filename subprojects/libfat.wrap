@@ -1,0 +1,7 @@
+[wrap-git]
+url = https://github.com/extremscorner/libfat.git
+# TODO: redolution/libogc2 is behind extremscorner/libogc2 which introduced a breaking change
+# which libfat relies on. Namely, the introduction of SYS_IsDMAAddress:
+# https://github.com/devkitPro/libfat/commit/6e782e688f89e05b0f5750e0c5eeef1dda492a37
+revision = 5700bbf2945cbb7ceda0bac9516a32cb7cc6e474
+patch_directory=libfat

@@ -40,6 +40,7 @@
               , gamecube-tools
               , meson
               , ninja
+              , clang-tools
               , p7zip
               , python3
               }: mkShell {
@@ -51,6 +52,9 @@
 
                   # The build system
                   meson ninja
+
+                  # clang-format
+                  clang-tools
 
                   # Compressing binaries and the release archive
                   p7zip

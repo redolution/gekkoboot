@@ -21,7 +21,7 @@ char *fresult_msgs[] = {
     /*FR_LOCKED              (16)*/ "The operation is rejected according to the file sharing policy",
     /*FR_NOT_ENOUGH_CORE     (17)*/ "LFN working buffer could not be allocated",
     /*FR_TOO_MANY_OPEN_FILES (18)*/ "Number of open files > FF_FS_LOCK",
-    /*FR_INVALID_PARAMETER   (19)*/ "Given parameter is invalid"
+    /*FR_INVALID_PARAMETER   (19)*/ "Given parameter is invalid",
 };
 int num_fresult_msgs = sizeof(fresult_msgs)/sizeof(fresult_msgs[0]);
 

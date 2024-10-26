@@ -7,6 +7,7 @@ stub_exe = executable(
         '-fPIC',
         '-ffreestanding',
         '-mno-eabi',
+        '-Wno-uninitialized',
     ],
     link_args: [
         '-nostdlib',

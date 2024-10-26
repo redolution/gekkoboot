@@ -4,6 +4,7 @@ project(
     meson_version: '>=1.2',
     default_options: {
         'optimization': 's',
+        'c_std': 'gnu2x',
     },
 )
 

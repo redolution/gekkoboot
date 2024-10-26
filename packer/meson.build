@@ -13,6 +13,9 @@ packer_stub = static_library(
         '-G', '32768',
         '-ffreestanding',
     ],
+    override_options: {
+        'c_std': 'gnu17',
+    },
     link_with: packer_crt,
     dependencies: [
         # For the headers

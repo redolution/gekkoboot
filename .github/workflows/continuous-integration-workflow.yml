@@ -12,7 +12,7 @@ jobs:
     - name: Install packages
       run: |
         sudo apt-get update
-        sudo apt-get install -y --no-install-recommends build-essential python3-pip p7zip-full
+        sudo apt-get install -y --no-install-recommends build-essential python3-pip p7zip-full clang-format-16
         pip3 install meson
 
     - name: Checkout gekkoboot
@@ -28,6 +28,7 @@ jobs:
         export PATH="$DEVKITPPC/bin:$PATH"
         meson setup . build --cross-file=devkitPPC.ini -Dfull_rom='enabled'
         meson compile -C build
+        ninja -C build clang-format-check
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v3

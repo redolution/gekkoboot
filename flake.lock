@@ -1,5 +1,23 @@
 {
   "nodes": {
+    "devkitNoob": {
+      "inputs": {
+        "nixpkgs": "nixpkgs"
+      },
+      "locked": {
+        "lastModified": 1727543176,
+        "narHash": "sha256-EhhUoA0p8lyGgf3nVYXaGWSeLxjC2qamr+Y+HXRvUlc=",
+        "owner": "devkitNoob",
+        "repo": "devkitNoob",
+        "rev": "b2b1866cb1e9d92b7c6a1deca4b4c20216560d26",
+        "type": "github"
+      },
+      "original": {
+        "owner": "devkitNoob",
+        "repo": "devkitNoob",
+        "type": "github"
+      }
+    },
     "flake-compat": {
       "flake": false,
       "locked": {
@@ -38,25 +56,29 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1702303468,
-        "narHash": "sha256-Rhh9iGAVSHiw6s1f+xdTsgTsDwacxlQMwp48KpOJMOE=",
-        "owner": "9ary",
+        "lastModified": 1724819573,
+        "narHash": "sha256-GnR7/ibgIH1vhoy8cYdmXE6iyZqKqFxQSVkFgosBh6w=",
+        "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "1da211707bf60a6afd56f2cf96d43ef01d32ef18",
+        "rev": "71e91c409d1e654808b2621f28a327acfdad8dc2",
         "type": "github"
       },
       "original": {
-        "owner": "9ary",
-        "ref": "devkitPPC",
+        "owner": "NixOS",
+        "ref": "nixos-unstable",
         "repo": "nixpkgs",
         "type": "github"
       }
     },
     "root": {
       "inputs": {
+        "devkitNoob": "devkitNoob",
         "flake-compat": "flake-compat",
         "flake-parts": "flake-parts",
-        "nixpkgs": "nixpkgs",
+        "nixpkgs": [
+          "devkitNoob",
+          "nixpkgs"
+        ],
         "systems": "systems"
       }
     },

@@ -6,7 +6,8 @@
       url = "github:edolstra/flake-compat";
       flake = false;
     };
-    nixpkgs.url = "github:9ary/nixpkgs/devkitPPC";
+    devkitNoob.url = "github:devkitNoob/devkitNoob";
+    nixpkgs.follows = "devkitNoob/nixpkgs";
     flake-parts = {
       url = "github:hercules-ci/flake-parts";
       inputs.nixpkgs-lib.follows = "nixpkgs";
@@ -28,13 +29,14 @@
         let
           systemConfig = config;
           systemOptions = options;
+          inherit (inputs') devkitNoob;
         in
         {
           _file = ./flake.nix;
           config = {
-            devShells.default = pkgs.callPackage
+            devShells.default = devkitNoob.legacyPackages.callPackage
               ({ mkShell
-              , devkitPPC
+              , noobkitPPC
               , gamecube-tools
               , meson
               , ninja
@@ -44,7 +46,7 @@
                 name = "gekkoboot";
                 nativeBuildInputs = [
                   # The cross toolchain
-                  devkitPPC
+                  noobkitPPC
                   gamecube-tools
 
                   # The build system
@@ -59,7 +61,7 @@
 
                 env = {
                   # For the libogc2 Makefile
-                  DEVKITPPC = devkitPPC;
+                  DEVKITPPC = pkgs.callPackage ./nix/dkppc-rules.nix {};
                 };
               })
               { };

@@ -1,0 +1,31 @@
+BasedOnStyle: LLVM
+
+TabWidth: 8
+IndentWidth: 8
+ContinuationIndentWidth: 8
+UseTab: AlignWithSpaces # But don't align, ever
+ColumnLimit: 99
+
+AlwaysBreakAfterReturnType: All
+BreakBeforeBinaryOperators: NonAssignment
+SpaceAfterCStyleCast: true
+
+BreakBeforeBraces: Attach
+InsertBraces: true
+AlignAfterOpenBracket: BlockIndent
+BinPackArguments: false
+BinPackParameters: false
+AllowAllParametersOfDeclarationOnNextLine: false
+InsertTrailingCommas: Wrapped
+
+AllowShortEnumsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: false
+
+IntegerLiteralSeparator:
+    Binary: 4
+    BinaryMinDigits: 6
+    Decimal: 3
+    DecimalMinDigits: 5
+    Hex: 4
+    HexMinDigits: 6

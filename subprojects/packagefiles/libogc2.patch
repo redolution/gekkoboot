@@ -1,0 +1,699 @@
+From 4a63efe11b620e170f572c0e760bbbc59fd786ae Mon Sep 17 00:00:00 2001
+From: novenary <novenary@kwak.zip>
+Date: Wed, 29 Nov 2023 18:46:32 +0200
+Subject: [PATCH 1/7] Fix out-of-tree builds
+
+---
+ .../continuous-integration-workflow.yml       |  4 +-
+ .gitignore                                    |  1 +
+ Doxyfile                                      |  4 +-
+ Makefile                                      | 59 +++++++++++--------
+ 4 files changed, 40 insertions(+), 28 deletions(-)
+
+diff --git a/.github/workflows/continuous-integration-workflow.yml b/.github/workflows/continuous-integration-workflow.yml
+index 8f8e9b0..1651810 100644
+--- a/.github/workflows/continuous-integration-workflow.yml
++++ b/.github/workflows/continuous-integration-workflow.yml
+@@ -27,7 +27,9 @@ jobs:
+         path: libntfs
+ 
+     - name: Build libogc2
+-      run: make install
++      run: |
++        mkdir -p build
++        make -C build -f ../Makefile install
+       working-directory: libogc2
+ 
+     - name: Build libfat
+diff --git a/.gitignore b/.gitignore
+index d1a46b2..19afba3 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -1,3 +1,4 @@
++build
+ cube
+ deps
+ include
+diff --git a/Doxyfile b/Doxyfile
+index 92e028c..aa53840 100644
+--- a/Doxyfile
++++ b/Doxyfile
+@@ -38,7 +38,7 @@ PROJECT_NUMBER         = 1.0
+ # If a relative path is entered, it will be relative to the location 
+ # where doxygen was started. If left blank the current directory will be used.
+ 
+-OUTPUT_DIRECTORY       = docs
++OUTPUT_DIRECTORY       = $(BUILDDIR)/docs
+ 
+ # If the CREATE_SUBDIRS tag is set to YES, then doxygen will create 
+ # 4096 sub-directories (in 2 levels) under the output directory of each output 
+@@ -579,7 +579,7 @@ WARN_FORMAT            = "$file:$line: $text"
+ # and error messages should be written. If left blank the output is written 
+ # to stderr.
+ 
+-WARN_LOGFILE           = warn.log
++WARN_LOGFILE           = $(BUILDDIR)/warn.log
+ 
+ #---------------------------------------------------------------------------
+ # configuration options related to the input files
+diff --git a/Makefile b/Makefile
+index 56ade00..f40a1e1 100644
+--- a/Makefile
++++ b/Makefile
+@@ -10,6 +10,8 @@ ifeq ($(strip $(DEVKITPPC)),)
+ $(error "Please set DEVKITPPC in your environment. export DEVKITPPC=<path to>devkitPPC")
+ endif
+ 
++CURFILE		:=	$(abspath $(lastword $(MAKEFILE_LIST)))
++
+ export PATH	:=	$(DEVKITPPC)/bin:$(PATH)
+ 
+ export LIBOGC_MAJOR	:= 2
+@@ -26,7 +28,8 @@ VERSTRING	:=	$(LIBOGC_MAJOR).$(LIBOGC_MINOR).$(LIBOGC_PATCH)
+ #---------------------------------------------------------------------------------
+ ifeq ($(strip $(PLATFORM)),)
+ #---------------------------------------------------------------------------------
+-export BASEDIR		:= $(CURDIR)
++export BUILDDIR		:= $(CURDIR)
++export BASEDIR		:= $(dir $(CURFILE))
+ export LWIPDIR		:= $(BASEDIR)/lwip
+ export OGCDIR		:= $(BASEDIR)/libogc
+ export MODDIR		:= $(BASEDIR)/libmodplay
+@@ -39,10 +42,10 @@ export LIBASNDDIR	:= $(BASEDIR)/libasnd
+ export LIBAESNDDIR	:= $(BASEDIR)/libaesnd
+ export LIBISODIR	:= $(BASEDIR)/libiso9660
+ export LIBWIIKEYB	:= $(BASEDIR)/libwiikeyboard
+-export DEPS			:=	$(BASEDIR)/deps
+-export LIBS			:=	$(BASEDIR)/lib
++export DEPS			:=	$(BUILDDIR)/deps
++export LIBS			:=	$(BUILDDIR)/lib
+ 
+-export INCDIR		:=	$(BASEDIR)/include
++export INCDIR		:=	$(BUILDDIR)/include
+ 
+ #---------------------------------------------------------------------------------
+ else
+@@ -74,10 +77,12 @@ WIIKEYBLIB	:= $(LIBDIR)/libwiikeyboard
+ DEFINCS		:= -I$(BASEDIR) -I$(BASEDIR)/gc
+ INCLUDES	:=	$(DEFINCS) -I$(BASEDIR)/gc/netif -I$(BASEDIR)/gc/ipv4 \
+ 				-I$(BASEDIR)/gc/ogc -I$(BASEDIR)/gc/ogc/machine \
++				-I$(BUILDDIR)/gc/ogc \
+ 				-I$(BASEDIR)/gc/modplay \
+ 				-I$(BASEDIR)/gc/bte \
+ 				-I$(BASEDIR)/gc/sdcard -I$(BASEDIR)/gc/wiiuse \
+-				-I$(BASEDIR)/gc/di
++				-I$(BASEDIR)/gc/di \
++				-I$(CURDIR)
+ 
+ MACHDEP		:= -DBIGENDIAN -DGEKKO -mcpu=750 -meabi -msdata=eabi -mhard-float -ffunction-sections -fdata-sections
+ 
+@@ -189,7 +194,7 @@ wii: gc/ogc/libversion.h
+ 	@[ -d $(LIBS)/wii ] || mkdir -p $(LIBS)/wii
+ 	@[ -d $(DEPS)/wii ] || mkdir -p $(DEPS)/wii
+ 	@[ -d wii ] || mkdir -p wii
+-	@$(MAKE) PLATFORM=wii libs -C wii -f $(CURDIR)/Makefile
++	@$(MAKE) PLATFORM=wii libs -C wii -f $(CURFILE)
+ 
+ #---------------------------------------------------------------------------------
+ cube: gc/ogc/libversion.h
+@@ -198,12 +203,13 @@ cube: gc/ogc/libversion.h
+ 	@[ -d $(LIBS)/cube ] || mkdir -p $(LIBS)/cube
+ 	@[ -d $(DEPS)/cube ] || mkdir -p $(DEPS)/cube
+ 	@[ -d cube ] || mkdir -p cube
+-	@$(MAKE) PLATFORM=cube libs -C cube -f $(CURDIR)/Makefile
++	@$(MAKE) PLATFORM=cube libs -C cube -f $(CURFILE)
+ 
+ 
+ #---------------------------------------------------------------------------------
+-gc/ogc/libversion.h : Makefile
++gc/ogc/libversion.h : $(CURFILE)
+ #---------------------------------------------------------------------------------
++	@[ -d gc/ogc ] || mkdir -p gc/ogc
+ 	@echo "#ifndef __OGC_LIBVERSION_H__" > $@
+ 	@echo "#define __OGC_LIBVERSION_H__" >> $@
+ 	@echo >> $@
+@@ -265,7 +271,7 @@ $(WIIUSELIB).a: $(WIIUSEOBJ)
+ .PHONY: libs wii cube install-headers install uninstall dist docs
+ 
+ #---------------------------------------------------------------------------------
+-install-headers:
++install-headers: gc/ogc/libversion.h
+ #---------------------------------------------------------------------------------
+ 	@mkdir -p $(INCDIR)
+ 	@mkdir -p $(INCDIR)/ogc/machine
+@@ -276,16 +282,17 @@ install-headers:
+ 	@mkdir -p $(INCDIR)/sdcard
+ 	@mkdir -p $(INCDIR)/di
+ 	@mkdir -p $(INCDIR)/wiikeyboard
+-	@cp ./gc/*.h $(INCDIR)
+-	@cp ./gc/ogc/*.h $(INCDIR)/ogc
+-	@cp ./gc/ogc/machine/*.h $(INCDIR)/ogc/machine
+-	@cp ./gc/sys/*.h $(INCDIR)/sys
+-	@cp ./gc/bte/*.h $(INCDIR)/bte
+-	@cp ./gc/wiiuse/*.h $(INCDIR)/wiiuse
+-	@cp ./gc/modplay/*.h $(INCDIR)/modplay
+-	@cp ./gc/sdcard/*.h $(INCDIR)/sdcard
+-	@cp ./gc/di/*.h $(INCDIR)/di
+-	@cp ./gc/wiikeyboard/*.h $(INCDIR)/wiikeyboard
++	@cp $(BASEDIR)/gc/*.h $(INCDIR)
++	@cp $(BASEDIR)/gc/ogc/*.h $(INCDIR)/ogc
++	@cp $(BUILDDIR)/gc/ogc/*.h $(INCDIR)/ogc
++	@cp $(BASEDIR)/gc/ogc/machine/*.h $(INCDIR)/ogc/machine
++	@cp $(BASEDIR)/gc/sys/*.h $(INCDIR)/sys
++	@cp $(BASEDIR)/gc/bte/*.h $(INCDIR)/bte
++	@cp $(BASEDIR)/gc/wiiuse/*.h $(INCDIR)/wiiuse
++	@cp $(BASEDIR)/gc/modplay/*.h $(INCDIR)/modplay
++	@cp $(BASEDIR)/gc/sdcard/*.h $(INCDIR)/sdcard
++	@cp $(BASEDIR)/gc/di/*.h $(INCDIR)/di
++	@cp $(BASEDIR)/gc/wiikeyboard/*.h $(INCDIR)/wiikeyboard
+ 
+ #---------------------------------------------------------------------------------
+ install: wii cube install-headers
+@@ -293,8 +300,8 @@ install: wii cube install-headers
+ 	@mkdir -p $(DESTDIR)$(DEVKITPRO)/libogc2
+ 	@cp -frv include $(DESTDIR)$(DEVKITPRO)/libogc2
+ 	@cp -frv lib $(DESTDIR)$(DEVKITPRO)/libogc2
+-	@cp -frv libogc_license.txt $(DESTDIR)$(DEVKITPRO)/libogc2
+-	@cp -frv gamecube_rules wii_rules $(DESTDIR)$(DEVKITPRO)/libogc2
++	@cp -frv $(BASEDIR)/libogc_license.txt $(DESTDIR)$(DEVKITPRO)/libogc2
++	@cp -frv $(BASEDIR)/gamecube_rules $(BASEDIR)/wii_rules $(DESTDIR)$(DEVKITPRO)/libogc2
+ 
+ #---------------------------------------------------------------------------------
+ uninstall:
+@@ -304,9 +311,10 @@ uninstall:
+ #---------------------------------------------------------------------------------
+ dist: wii cube install-headers
+ #---------------------------------------------------------------------------------
+-	@tar    --exclude=*CVS* --exclude=.svn --exclude=wii --exclude=cube --exclude=*deps* \
+-		--exclude=*.bz2  --exclude=*include* --exclude=*lib/* --exclude=*docs/*\
+-		-cvjf libogc2-src-$(VERSTRING).tar.bz2 *
++	@tar -C $(BASEDIR) --exclude-vcs --exclude-vcs-ignores --exclude .github \
++		-cvjf $(BUILDDIR)/libogc2-src-$(VERSTRING).tar.bz2 .
++
++	@cp $(BASEDIR)/libogc_license.txt $(BASEDIR)/gamecube_rules $(BASEDIR)/wii_rules .
+ 	@tar -cvjf libogc2-$(VERSTRING).tar.bz2 include lib libogc_license.txt gamecube_rules wii_rules
+ 
+ 
+@@ -327,6 +335,7 @@ libs: $(LIBRARIES)
+ clean:
+ #---------------------------------------------------------------------------------
+ 	rm -fr wii cube
++	rm -fr gc/ogc/libversion.h
+ 	rm -fr $(DEPS)
+ 	rm -fr $(LIBS)
+ 	rm -fr $(INCDIR)
+@@ -335,6 +344,6 @@ clean:
+ #---------------------------------------------------------------------------------
+ docs: install-headers
+ #---------------------------------------------------------------------------------
+-	doxygen Doxyfile
++	@cd $(BASEDIR); doxygen Doxyfile
+ 
+ -include $(DEPSDIR)/*.d
+-- 
+2.44.1
+
+
+From 649ca8b8f472c7baf089ce3c8eabe9f1a540ebc8 Mon Sep 17 00:00:00 2001
+From: novenary <novenary@kwak.zip>
+Date: Wed, 29 Nov 2023 19:08:07 +0200
+Subject: [PATCH 2/7] Make optimization level configurable
+
+---
+ Makefile | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/Makefile b/Makefile
+index f40a1e1..c875d4f 100644
+--- a/Makefile
++++ b/Makefile
+@@ -102,7 +102,8 @@ endif
+ INCLUDES	+=	-I$(PORTLIBS_PATH)/ppc/include
+ 
+ 
+-CFLAGS		:= -DLIBOGC_INTERNAL -g -O2 -fno-strict-aliasing -Wall -Wno-address-of-packed-member $(MACHDEP) $(INCLUDES)
++OPTLEVEL	?= 2
++CFLAGS		:= -DLIBOGC_INTERNAL -g -O$(OPTLEVEL) -fno-strict-aliasing -Wall -Wno-address-of-packed-member $(MACHDEP) $(INCLUDES)
+ ASFLAGS		:=	$(MACHDEP) -mregnames -D_LANGUAGE_ASSEMBLY $(INCLUDES)
+ 
+ #---------------------------------------------------------------------------------
+-- 
+2.44.1
+
+
+From 7e57e51c0b7709213aa8172e3dc090f1fa815b90 Mon Sep 17 00:00:00 2001
+From: novenary <novenary@kwak.zip>
+Date: Wed, 29 Nov 2023 22:24:26 +0200
+Subject: [PATCH 3/7] Allow selective building of libraries and platforms
+
+make -C build -f ../Makefile -j10  90.11s user 8.46s system 746% cpu 13.207 total
+make -C build -f ../Makefile -j10 PLATFORMS=cube LIBRARIES=ogc  19.28s user 1.93s system 586% cpu 3.619 total
+---
+ Makefile | 17 ++++++++++-------
+ 1 file changed, 10 insertions(+), 7 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index c875d4f..99c436c 100644
+--- a/Makefile
++++ b/Makefile
+@@ -186,7 +186,8 @@ WIIKEYBLIBOBJ	:=	usbkeyboard.o keyboard.o ukbdmap.o wskbdutil.o
+ 
+ 
+ 
+-all: wii cube
++PLATFORMS	?= wii cube
++all: $(PLATFORMS)
+ 
+ #---------------------------------------------------------------------------------
+ wii: gc/ogc/libversion.h
+@@ -296,7 +297,7 @@ install-headers: gc/ogc/libversion.h
+ 	@cp $(BASEDIR)/gc/wiikeyboard/*.h $(INCDIR)/wiikeyboard
+ 
+ #---------------------------------------------------------------------------------
+-install: wii cube install-headers
++install: $(PLATFORMS) install-headers
+ #---------------------------------------------------------------------------------
+ 	@mkdir -p $(DESTDIR)$(DEVKITPRO)/libogc2
+ 	@cp -frv include $(DESTDIR)$(DEVKITPRO)/libogc2
+@@ -310,7 +311,7 @@ uninstall:
+ 	@rm -frv $(DESTDIR)$(DEVKITPRO)/libogc2
+ 
+ #---------------------------------------------------------------------------------
+-dist: wii cube install-headers
++dist: $(PLATFORMS) install-headers
+ #---------------------------------------------------------------------------------
+ 	@tar -C $(BASEDIR) --exclude-vcs --exclude-vcs-ignores --exclude .github \
+ 		-cvjf $(BUILDDIR)/libogc2-src-$(VERSTRING).tar.bz2 .
+@@ -319,17 +320,19 @@ dist: wii cube install-headers
+ 	@tar -cvjf libogc2-$(VERSTRING).tar.bz2 include lib libogc_license.txt gamecube_rules wii_rules
+ 
+ 
+-LIBRARIES	:=	$(OGCLIB).a  $(MODLIB).a $(DBLIB).a $(TINYSMBLIB).a $(ASNDLIB).a $(AESNDLIB).a $(ISOLIB).a
++ifeq ($(strip $(LIBRARIES)),)
++LIBRARIES	:=	ogc modplay db tinysmb asnd aesnd iso9660
+ 
+ ifeq ($(PLATFORM),cube)
+-LIBRARIES	+=	$(BBALIB).a
++LIBRARIES	+=	bba
+ endif
+ ifeq ($(PLATFORM),wii)
+-LIBRARIES	+=	$(BTELIB).a $(WIIUSELIB).a $(DILIB).a $(WIIKEYBLIB).a
++LIBRARIES	+=	bte wiiuse di wiikeyboard
++endif
+ endif
+ 
+ #---------------------------------------------------------------------------------
+-libs: $(LIBRARIES)
++libs: $(foreach lib,$(LIBRARIES),$(LIBDIR)/lib$(lib).a)
+ #---------------------------------------------------------------------------------
+ 
+ #---------------------------------------------------------------------------------
+-- 
+2.44.1
+
+
+From dc27c7f958c5753b6e80dc188fa59d4b308d1a4d Mon Sep 17 00:00:00 2001
+From: novenary <novenary@kwak.zip>
+Date: Thu, 30 Nov 2023 00:13:00 +0200
+Subject: [PATCH 4/7] Support custom prefix, incdir and libdir
+
+---
+ .gitignore                          |  1 +
+ Makefile                            | 42 ++++++++++++++++++++++-------
+ gamecube_rules => gamecube_rules.in |  4 +--
+ wii_rules => wii_rules.in           |  4 +--
+ 4 files changed, 37 insertions(+), 14 deletions(-)
+ rename gamecube_rules => gamecube_rules.in (89%)
+ rename wii_rules => wii_rules.in (89%)
+
+diff --git a/.gitignore b/.gitignore
+index 19afba3..68c7041 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -5,6 +5,7 @@ include
+ lib
+ wii
+ gc/ogc/libversion.h
++*_rules
+ *.bz2
+ docs
+ warn.log
+diff --git a/Makefile b/Makefile
+index 99c436c..ee01ef3 100644
+--- a/Makefile
++++ b/Makefile
+@@ -2,9 +2,16 @@
+ .SUFFIXES:
+ #---------------------------------------------------------------------------------
+ 
++ifeq ($(strip $(INSTALL_PREFIX)),)
+ ifeq ($(strip $(DEVKITPRO)),)
+ $(error "Please set DEVKITPRO in your environment. export DEVKITPRO=<path to>devkitPro")
+ endif
++# Prevent variable expansion so it stays as-is in the installable rules
++INSTALL_PREFIX	:= $$(DEVKITPRO)/libogc2
++endif
++
++INCDEST	?= include
++LIBDEST	?= lib
+ 
+ ifeq ($(strip $(DEVKITPPC)),)
+ $(error "Please set DEVKITPPC in your environment. export DEVKITPPC=<path to>devkitPPC")
+@@ -226,6 +233,16 @@ gc/ogc/libversion.h : $(CURFILE)
+ 	@echo >> $@
+ 	@echo "#endif // __OGC_LIBVERSION_H__" >> $@
+ 
++#---------------------------------------------------------------------------------
++RULES		:= wii_rules gamecube_rules
++%_rules: $(BASEDIR)/%_rules.in
++#---------------------------------------------------------------------------------
++	@sed \
++		-e "s|@PREFIX@|\$(INSTALL_PREFIX)|g" \
++		-e "s|@INCDIR@|$(INCDEST)|g" \
++		-e "s|@LIBDIR@|$(LIBDEST)|g" \
++		$< > $@
++
+ #---------------------------------------------------------------------------------
+ asndlib.o: asnd_dsp_mixer.h
+ #---------------------------------------------------------------------------------
+@@ -297,27 +314,31 @@ install-headers: gc/ogc/libversion.h
+ 	@cp $(BASEDIR)/gc/wiikeyboard/*.h $(INCDIR)/wiikeyboard
+ 
+ #---------------------------------------------------------------------------------
+-install: $(PLATFORMS) install-headers
++install: $(PLATFORMS) $(RULES) install-headers
+ #---------------------------------------------------------------------------------
+-	@mkdir -p $(DESTDIR)$(DEVKITPRO)/libogc2
+-	@cp -frv include $(DESTDIR)$(DEVKITPRO)/libogc2
+-	@cp -frv lib $(DESTDIR)$(DEVKITPRO)/libogc2
+-	@cp -frv $(BASEDIR)/libogc_license.txt $(DESTDIR)$(DEVKITPRO)/libogc2
+-	@cp -frv $(BASEDIR)/gamecube_rules $(BASEDIR)/wii_rules $(DESTDIR)$(DEVKITPRO)/libogc2
++	@$(eval INSTALL_PREFIX := $(INSTALL_PREFIX)) # Expand
++	@mkdir -p $(DESTDIR)$(INSTALL_PREFIX)
++	@mkdir -p $(DESTDIR)$(INSTALL_PREFIX)/$(INCDEST)
++	@cp -frv include/* -t $(DESTDIR)$(INSTALL_PREFIX)/$(INCDEST)
++	@mkdir -p $(DESTDIR)$(INSTALL_PREFIX)/$(LIBDEST)
++	@cp -frv lib/* -t $(DESTDIR)$(INSTALL_PREFIX)/$(LIBDEST)
++	@cp -frv $(BASEDIR)/libogc_license.txt $(DESTDIR)$(INSTALL_PREFIX)
++	@cp -frv $(RULES) $(DESTDIR)$(INSTALL_PREFIX)
+ 
+ #---------------------------------------------------------------------------------
+ uninstall:
+ #---------------------------------------------------------------------------------
+-	@rm -frv $(DESTDIR)$(DEVKITPRO)/libogc2
++	@$(eval INSTALL_PREFIX := $(INSTALL_PREFIX)) # Expand
++	@rm -frv $(DESTDIR)$(INSTALL_PREFIX)
+ 
+ #---------------------------------------------------------------------------------
+-dist: $(PLATFORMS) install-headers
++dist: $(PLATFORMS) $(RULES) install-headers
+ #---------------------------------------------------------------------------------
+ 	@tar -C $(BASEDIR) --exclude-vcs --exclude-vcs-ignores --exclude .github \
+ 		-cvjf $(BUILDDIR)/libogc2-src-$(VERSTRING).tar.bz2 .
+ 
+-	@cp $(BASEDIR)/libogc_license.txt $(BASEDIR)/gamecube_rules $(BASEDIR)/wii_rules .
+-	@tar -cvjf libogc2-$(VERSTRING).tar.bz2 include lib libogc_license.txt gamecube_rules wii_rules
++	@cp $(BASEDIR)/libogc_license.txt .
++	@tar -cvjf libogc2-$(VERSTRING).tar.bz2 include lib libogc_license.txt $(RULES)
+ 
+ 
+ ifeq ($(strip $(LIBRARIES)),)
+@@ -340,6 +361,7 @@ clean:
+ #---------------------------------------------------------------------------------
+ 	rm -fr wii cube
+ 	rm -fr gc/ogc/libversion.h
++	rm -fr $(RULES)
+ 	rm -fr $(DEPS)
+ 	rm -fr $(LIBS)
+ 	rm -fr $(INCDIR)
+diff --git a/gamecube_rules b/gamecube_rules.in
+similarity index 89%
+rename from gamecube_rules
+rename to gamecube_rules.in
+index de42216..0cc754b 100644
+--- a/gamecube_rules
++++ b/gamecube_rules.in
+@@ -8,8 +8,8 @@ PORTLIBS	:=	$(PORTLIBS_PATH)/gamecube $(PORTLIBS_PATH)/ppc
+ 
+ export PATH	:=	$(PORTLIBS_PATH)/gamecube/bin:$(PORTLIBS_PATH)/ppc/bin:$(PATH)
+ 
+-export	LIBOGC_INC	:=	$(DEVKITPRO)/libogc2/include
+-export	LIBOGC_LIB	:=	$(DEVKITPRO)/libogc2/lib/cube
++export	LIBOGC_INC	:=	@PREFIX@/@INCDIR@
++export	LIBOGC_LIB	:=	@PREFIX@/@LIBDIR@/cube
+ 
+ 
+ MACHDEP =  -DGEKKO -mogc -mcpu=750 -meabi -mhard-float
+diff --git a/wii_rules b/wii_rules.in
+similarity index 89%
+rename from wii_rules
+rename to wii_rules.in
+index 4c979ed..8a8b3f5 100644
+--- a/wii_rules
++++ b/wii_rules.in
+@@ -8,8 +8,8 @@ PORTLIBS	:=	$(PORTLIBS_PATH)/wii $(PORTLIBS_PATH)/ppc
+ 
+ export PATH     :=      $(PORTLIBS_PATH)/wii/bin:$(PORTLIBS_PATH)/ppc/bin:$(PATH)
+ 
+-export	LIBOGC_INC	:=	$(DEVKITPRO)/libogc2/include
+-export	LIBOGC_LIB	:=	$(DEVKITPRO)/libogc2/lib/wii
++export	LIBOGC_INC	:=	@PREFIX@/@INCDIR@
++export	LIBOGC_LIB	:=	@PREFIX@/@LIBDIR@/wii
+ 
+ MACHDEP =  -DGEKKO -mrvl -mcpu=750 -meabi -mhard-float
+ 
+-- 
+2.44.1
+
+
+From f7288ac82a71cc8672daae9037b851e0b8f2e97c Mon Sep 17 00:00:00 2001
+From: novenary <novenary@kwak.zip>
+Date: Thu, 30 Nov 2023 21:06:45 +0200
+Subject: [PATCH 5/7] Add meson wrapper
+
+---
+ .gitignore    |  1 +
+ configure     | 58 +++++++++++++++++++++++++++++++++++++++++++++++++++
+ meson.build   | 38 +++++++++++++++++++++++++++++++++
+ meson.options |  2 ++
+ 4 files changed, 99 insertions(+)
+ create mode 100755 configure
+ create mode 100644 meson.build
+ create mode 100644 meson.options
+
+diff --git a/.gitignore b/.gitignore
+index 68c7041..8f31e71 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -9,3 +9,4 @@ gc/ogc/libversion.h
+ *.bz2
+ docs
+ warn.log
++.meson-subproject-wrap-hash.txt
+diff --git a/configure b/configure
+new file mode 100755
+index 0000000..f9f3e52
+--- /dev/null
++++ b/configure
+@@ -0,0 +1,58 @@
++#!/usr/bin/env bash
++
++src=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
++
++if [[ "$(readlink -f "$PWD")" == "$src" ]]; then
++    printf '%s\n' 'This script must be run out of tree!'
++    exit 1
++fi
++
++tmp=$(mktemp -t Makefile.XXXXXXXXXX)
++trap 'rm -f "$tmp"' EXIT
++
++function write() {
++    printf '%s\n' "$*" >> "$tmp"
++}
++
++write '# Automatically generated file'
++
++platforms=()
++libs=()
++
++for arg in "$@"; do
++    val="${arg#*=}"
++    case $arg in
++        --prefix=*)
++            write export INSTALL_PREFIX := "$val"
++            ;;
++        --incdir=*)
++            write export INCDEST := "$val"
++            ;;
++        --libdir=*)
++            write export LIBDEST := "$val"
++            ;;
++        --opt-level=*)
++            write export OPTLEVEL := "$val"
++            ;;
++        --with-platform=*)
++            platforms+=("$val")
++            ;;
++        --with-lib=*)
++            libs+=("$val")
++            ;;
++        *)
++            printf '%s\n' "$arg: Invalid argument"
++            exit 1
++    esac
++done
++
++if (( ${#platforms[@]} )); then
++    write export PLATFORMS := "${platforms[@]}"
++fi
++
++if (( ${#libs[@]} )); then
++    write export LIBRARIES := "${libs[@]}"
++fi
++
++write "include $src/Makefile"
++cp "$tmp" Makefile
+diff --git a/meson.build b/meson.build
+new file mode 100644
+index 0000000..1ce551a
+--- /dev/null
++++ b/meson.build
+@@ -0,0 +1,38 @@
++project(
++    'libogc2',
++    ['c'],
++    meson_version: '>=1.1',
++)
++
++external_project = import('unstable-external_project')
++
++opt_level = get_option('optimization')
++platform = get_option('platform')
++libraries = get_option('libraries')
++
++if libraries.length() == 0
++    error('Must specify libraries to build.')
++endif
++
++lib_args = []
++foreach lib: libraries
++    lib_args += '--with-lib=' + lib
++endforeach
++
++p = external_project.add_project(
++    'configure',
++    configure_options: [
++        '--prefix=@PREFIX@',
++        '--libdir=@LIBDIR@',
++        '--incdir=@INCLUDEDIR@',
++        '--opt-level=' + opt_level,
++        '--with-platform=' + platform,
++    ] + lib_args,
++    cross_configure_options: [],
++)
++
++deps = {}
++foreach lib: libraries
++    dep = p.dependency(':' + platform + '/lib' + lib + '.a')
++    deps += {lib: dep}
++endforeach
+diff --git a/meson.options b/meson.options
+new file mode 100644
+index 0000000..dd5db87
+--- /dev/null
++++ b/meson.options
+@@ -0,0 +1,2 @@
++option('platform', type: 'combo', choices: ['cube', 'wii'])
++option('libraries', type: 'array')
+-- 
+2.44.1
+
+
+From 1caaceb71c2bfbc17750be150a02209ff245a07f Mon Sep 17 00:00:00 2001
+From: novenary <novenary@kwak.zip>
+Date: Tue, 5 Dec 2023 20:33:04 +0200
+Subject: [PATCH 6/7] Make console_font_8x16 weak
+
+---
+ libogc/console_font_8x16.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/libogc/console_font_8x16.c b/libogc/console_font_8x16.c
+index 21ef8da..40c4740 100644
+--- a/libogc/console_font_8x16.c
++++ b/libogc/console_font_8x16.c
+@@ -1,4 +1,4 @@
+-unsigned char console_font_8x16[] = {
++unsigned char console_font_8x16[] __attribute__((weak)) = {
+ 
+ 	/* 0 0x00 '^@' */
+ 	0x00, /* 00000000 */
+-- 
+2.44.1
+
+
+From ccee14a8d4308d890a10b34ea65d2fd637d6189d Mon Sep 17 00:00:00 2001
+From: novenary <novenary@kwak.zip>
+Date: Tue, 5 Dec 2023 22:07:32 +0200
+Subject: [PATCH 7/7] Make builds deterministic
+
+- Remove use of __DATE__ and __TIME__, it was dead code anyway
+- Set ar to deterministic mode
+
+This allows consecutive rebuilds to produce identical binaries.
+---
+ Makefile        | 5 +----
+ libogc/system.c | 3 +--
+ 2 files changed, 2 insertions(+), 6 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index ee01ef3..38959ac 100644
+--- a/Makefile
++++ b/Makefile
+@@ -26,10 +26,10 @@ export LIBOGC_MINOR	:= 1
+ export LIBOGC_PATCH	:= 0
+ 
+ include	$(DEVKITPPC)/base_rules
++export AR	:=	$(AR) -D
+ 
+ BUILD		:=	build
+ 
+-DATESTRING	:=	$(shell date +%Y%m%d)
+ VERSTRING	:=	$(LIBOGC_MAJOR).$(LIBOGC_MINOR).$(LIBOGC_PATCH)
+ 
+ #---------------------------------------------------------------------------------
+@@ -226,9 +226,6 @@ gc/ogc/libversion.h : $(CURFILE)
+ 	@echo "#define _V_MINOR_	$(LIBOGC_MINOR)" >> $@
+ 	@echo "#define _V_PATCH_	$(LIBOGC_PATCH)" >> $@
+ 	@echo >> $@
+-	@echo "#define _V_DATE_			__DATE__" >> $@
+-	@echo "#define _V_TIME_			__TIME__" >> $@
+-	@echo >> $@
+ 	@echo '#define _V_STRING "libOGC Release '$(LIBOGC_MAJOR).$(LIBOGC_MINOR).$(LIBOGC_PATCH)'"' >> $@
+ 	@echo >> $@
+ 	@echo "#endif // __OGC_LIBVERSION_H__" >> $@
+diff --git a/libogc/system.c b/libogc/system.c
+index bf07905..b4da7f9 100644
+--- a/libogc/system.c
++++ b/libogc/system.c
+@@ -237,7 +237,6 @@ static sys_resetinfo mem_resetinfo = {
+ 	127
+ };
+ 
+-static const char *__sys_versiondate;
+ static const char *__sys_versionbuild;
+ 
+ static __inline__ alarm_st* __lwp_syswd_open(syswd_t wd)
+@@ -1034,7 +1033,7 @@ void* __SYS_GetIPCBufferHi(void)
+ #endif
+ 
+ void _V_EXPORTNAME(void)
+-{ __sys_versionbuild = _V_STRING; __sys_versiondate = _V_DATE_; }
++{ __sys_versionbuild = _V_STRING; }
+ 
+ #if defined(HW_RVL)
+ void __SYS_DoPowerCB(void)
+-- 
+2.44.1
+

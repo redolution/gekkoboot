@@ -3675,6 +3675,7 @@ FRESULT f_mount (
 	FRESULT res;
 	const TCHAR *rp = path;
 
+	fs->win = (BYTE*)((intptr_t)(fs->win_ + FF_DMA_ALIGNMENT - 1) & ~(FF_DMA_ALIGNMENT - 1));
 
 	/* Get volume ID (logical drive number) */
 	vol = get_ldnumber(&rp);
@@ -3740,6 +3741,9 @@ FRESULT f_open (
 #endif
 	DEF_NAMBUF
 
+#if !FF_FS_TINY
+	fp->buf = (BYTE*)((intptr_t)(fp->buf_ + FF_DMA_ALIGNMENT - 1) & ~(FF_DMA_ALIGNMENT - 1));
+#endif
 
 	if (!fp) return FR_INVALID_OBJECT;
 

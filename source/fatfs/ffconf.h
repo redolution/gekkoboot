@@ -295,3 +295,5 @@
 
 
 /*--- End of configuration options ---*/
+
+#define FF_DMA_ALIGNMENT 32

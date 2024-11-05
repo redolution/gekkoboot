@@ -31,7 +31,8 @@ jobs:
         ninja -C build clang-format-check
 
     - name: Upload build artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: gekkoboot
         path: build
+        include-hidden-files: true

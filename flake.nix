@@ -13,19 +13,22 @@
   outputs = inputs: let
     inherit (inputs.nixpkgs) lib;
     inherit (lib) genAttrs;
-    forAllSystems = genAttrs systems;
+    forAllSystems = fn:
+      genAttrs systems (system:
+        fn rec {
+          inherit system;
+          devkitNoob = inputs.devkitNoob.legacyPackages.${system};
+          inherit (devkitNoob) nixpkgs;
+        });
     systems = lib.systems.flakeExposed;
   in {
-    formatter = forAllSystems (system: let
-      devkitNoob = inputs.devkitNoob.legacyPackages.${system};
-      inherit (devkitNoob) nixpkgs;
-    in
-      nixpkgs.alejandra);
+    formatter = forAllSystems ({nixpkgs, ...}: nixpkgs.alejandra);
 
-    devShells = forAllSystems (system: let
-      devkitNoob = inputs.devkitNoob.legacyPackages.${system};
-      inherit (devkitNoob) nixpkgs;
-    in {
+    devShells = forAllSystems ({
+      devkitNoob,
+      nixpkgs,
+      ...
+    }: {
       default =
         devkitNoob.callPackage
         ({

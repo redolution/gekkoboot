@@ -1,9 +1,9 @@
-{ stdenvNoCC
-, callPackage
-, lib
-, fetchFromGitHub
+{
+  stdenvNoCC,
+  callPackage,
+  lib,
+  fetchFromGitHub,
 }:
-
 stdenvNoCC.mkDerivation (finalAttrs: {
   pname = "devkitPPC-rules";
   version = "1.2.1";

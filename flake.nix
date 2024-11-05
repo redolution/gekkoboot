@@ -8,69 +8,63 @@
     };
     devkitNoob.url = "github:devkitNoob/devkitNoob";
     nixpkgs.follows = "devkitNoob/nixpkgs";
-    flake-parts = {
-      url = "github:hercules-ci/flake-parts";
-      inputs.nixpkgs-lib.follows = "nixpkgs";
-    };
-    systems.flake = false;
   };
 
-  outputs = { ... } @ inputs: inputs.flake-parts.lib.mkFlake {
-    inherit inputs;
-  } ({ config, flake-parts-lib, getSystem, inputs, lib, options, ... }:
-    let
-      rootConfig = config;
-      rootOptions = options;
+  outputs = inputs: let
+    inherit (inputs.nixpkgs) lib;
+    inherit (lib) genAttrs;
+    forAllSystems = genAttrs systems;
+    systems = lib.systems.flakeExposed;
+  in {
+    formatter = forAllSystems (system: let
+      devkitNoob = inputs.devkitNoob.legacyPackages.${system};
+      inherit (devkitNoob) nixpkgs;
     in
-    {
-      _file = ./flake.nix;
-      imports = [ ];
-      config.perSystem = { config, inputs', nixpkgs, options, pkgs, system, ... }:
-        let
-          systemConfig = config;
-          systemOptions = options;
-          inherit (inputs') devkitNoob;
-        in
-        {
-          _file = ./flake.nix;
-          config = {
-            devShells.default = devkitNoob.legacyPackages.callPackage
-              ({ mkShell
-              , noobkitPPC
-              , gamecube-tools
-              , meson
-              , ninja
-              , clang-tools
-              , p7zip
-              , python3
-              }: mkShell {
-                name = "gekkoboot";
-                nativeBuildInputs = [
-                  # The cross toolchain
-                  noobkitPPC
-                  gamecube-tools
+      nixpkgs.alejandra);
 
-                  # The build system
-                  meson ninja
+    devShells = forAllSystems (system: let
+      devkitNoob = inputs.devkitNoob.legacyPackages.${system};
+      inherit (devkitNoob) nixpkgs;
+    in {
+      default =
+        devkitNoob.callPackage
+        ({
+          mkShell,
+          noobkitPPC,
+          gamecube-tools,
+          meson,
+          ninja,
+          clang-tools,
+          p7zip,
+          python3,
+        }:
+          mkShell {
+            name = "gekkoboot";
+            nativeBuildInputs = [
+              # The cross toolchain
+              noobkitPPC
+              gamecube-tools
 
-                  # clang-format
-                  clang-tools
+              # The build system
+              meson
+              ninja
 
-                  # Compressing binaries and the release archive
-                  p7zip
+              # clang-format
+              clang-tools
 
-                  # For build scripts
-                  python3
-                ];
+              # Compressing binaries and the release archive
+              p7zip
 
-                env = {
-                  # For the libogc2 Makefile
-                  DEVKITPPC = pkgs.callPackage ./nix/dkppc-rules.nix {};
-                };
-              })
-              { };
-          };
-        };
-      config.systems = import inputs.systems;
-  });
+              # For build scripts
+              python3
+            ];
+
+            env = {
+              # For the libogc2 Makefile
+              DEVKITPPC = nixpkgs.callPackage ./nix/dkppc-rules.nix {};
+            };
+          })
+        {};
+    });
+  };
 }

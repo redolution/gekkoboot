@@ -1,186 +1,312 @@
-#include "fatfs/ff.h"
-#include "ffshim.h"
-#include "utils.h"
+#include "cli_args.h"
+#include "config.h"
+#include "filesystem.h"
+#include "shortcut.h"
+#include "types.h"
 #include "version.h"
 #include <fcntl.h>
+#include <gccore.h>
 #include <malloc.h>
 #include <ogc/lwp_watchdog.h>
 #include <ogc/system.h>
-#include <sdcard/gcsd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
+#ifndef EMU_BUILD
 #include "stub.h"
-
-#define VERBOSE_LOGGING 0
-
-u8 *dol = NULL;
-int dol_argc = 0;
-#define MAX_NUM_ARGV 1024
-char *dol_argv[MAX_NUM_ARGV];
-u16 all_buttons_held;
-
-char *default_path = "/ipl.dol";
-struct shortcut {
-	u16 pad_buttons;
-	char *path;
-} shortcuts[] = {
-	{PAD_BUTTON_A, "/a.dol"},
-	{PAD_BUTTON_B, "/b.dol"},
-	{PAD_BUTTON_X, "/x.dol"},
-	{PAD_BUTTON_Y, "/y.dol"},
-	{PAD_TRIGGER_Z, "/z.dol"},
-	{PAD_BUTTON_START, "/start.dol"},
-	// NOTE: Shouldn't use L, R or Joysticks as analog inputs are calibrated on boot.
-        // Should also avoid D-Pad as it is used for special functionality.
-};
-int num_shortcuts = sizeof(shortcuts) / sizeof(shortcuts[0]);
-
-void
-dol_alloc(int size) {
-	int mram_size = (SYS_GetArenaHi() - SYS_GetArenaLo());
-	kprintf("Memory available: %iB\n", mram_size);
-
-	kprintf("DOL size is %iB\n", size);
-
-	if (size <= 0) {
-		kprintf("Empty DOL\n");
-		return;
-	}
-
-	dol = (u8 *) memalign(32, size);
-
-	if (!dol) {
-		kprintf("Couldn't allocate memory\n");
-	}
-}
-
-void
-load_parse_cli(char *path) {
-	int path_length = strlen(path);
-	path[path_length - 3] = 'c';
-	path[path_length - 2] = 'l';
-	path[path_length - 1] = 'i';
-
-	kprintf("Reading %s\n", path);
-	FIL file;
-	FRESULT result = f_open(&file, path, FA_READ);
-	if (result != FR_OK) {
-		if (result == FR_NO_FILE) {
-			kprintf("CLI file not found\n");
-		} else {
-			kprintf("Failed to open CLI file: %s\n", get_fresult_message(result));
-		}
-		return;
-	}
-
-	size_t size = f_size(&file);
-	kprintf("CLI file size is %iB\n", size);
-
-	if (size <= 0) {
-		kprintf("Empty CLI file\n");
-		return;
-	}
-
-	char *cli = (char *) malloc(size + 1);
-
-	if (!cli) {
-		kprintf("Couldn't allocate memory for CLI file\n");
-		return;
-	}
-
-	UINT _;
-	f_read(&file, cli, size, &_);
-	f_close(&file);
-
-	if (cli[size - 1] != '\0') {
-		cli[size] = '\0';
-		size++;
-	}
-
-	// Parse CLI file
-	// https://github.com/emukidid/swiss-gc/blob/a0fa06d81360ad6d173acd42e4dd5495e268de42/cube/swiss/source/swiss.c#L1236
-	dol_argv[dol_argc] = path;
-	dol_argc++;
-
-	// First argument is at the beginning of the file
-	if (cli[0] != '\r' && cli[0] != '\n') {
-		dol_argv[dol_argc] = cli;
-		dol_argc++;
-	}
-
-	// Search for the others after each newline
-	for (int i = 0; i < size; i++) {
-		if (cli[i] == '\r' || cli[i] == '\n') {
-			cli[i] = '\0';
-		} else if (cli[i - 1] == '\0') {
-			dol_argv[dol_argc] = cli + i;
-			dol_argc++;
-			if (dol_argc >= MAX_NUM_ARGV) {
-				kprintf("Reached max of %i args.\n", MAX_NUM_ARGV);
-				break;
-			}
-		}
-	}
-
-	kprintf("Found %i CLI args\n", dol_argc);
-
-#if VERBOSE_LOGGING
-	for (int i = 0; i < dol_argc; ++i) {
-		kprintf("arg%i: %s\n", i, dol_argv[i]);
-	}
+#include <sdcard/gcsd.h>
+extern u8 __xfb[];
+#else
+#include <sdcard/wiisd_io.h>
+static void *__xfb = NULL;
 #endif
+
+// Global State
+// --------------------
+int debug_enabled = false;
+u16 all_buttons_held;
+// --------------------
+
+void
+scan_all_buttons_held() {
+	PAD_ScanPads();
+	all_buttons_held =
+		(PAD_ButtonsHeld(PAD_CHAN0) | PAD_ButtonsHeld(PAD_CHAN1)
+	         | PAD_ButtonsHeld(PAD_CHAN2) | PAD_ButtonsHeld(PAD_CHAN3));
 }
 
+void
+wait_for_confirmation() {
+	// Wait until the A button or reset button is pressed.
+	int cur_state = true;
+	int last_state;
+	do {
+		VIDEO_WaitVSync();
+		scan_all_buttons_held();
+		last_state = cur_state;
+		cur_state = all_buttons_held & PAD_BUTTON_A;
+	} while (last_state || !cur_state);
+}
+
+void
+delay_exit() {
+	if (debug_enabled) {
+		// When debug is enabled, always wait for confirmation before exit.
+		kprintf("\nDEBUG: Press A to continue...\n");
+		wait_for_confirmation();
+	}
+}
+
+// 0 - Failure
+// 1 - OK/Does not exist
 int
-load_fat(const char *slot_name, const DISC_INTERFACE *iface_, char **paths, int num_paths) {
+read_dol_file(u8 **dol_file, const char *path) {
+	*dol_file = NULL;
+
+	kprintf("Trying DOL file: %s\n", path);
+	FS_RESULT result = fs_read_file((void **) dol_file, path);
+	if (result == FS_OK) {
+		kprintf("->> DOL loaded\n");
+	}
+	return (result == FS_OK || result == FS_NO_FILE || result == FS_FILE_EMPTY);
+}
+
+// 0 - Failure
+// 1 - OK/Does not exist
+int
+read_config_file(const char **config_file, const char *path) {
+	*config_file = NULL;
+
+	kprintf("Trying config file: %s\n", path);
+	FS_RESULT result = fs_read_file_string(config_file, path);
+	if (result == FS_OK) {
+		kprintf("->> Config loaded\n");
+	}
+	return (result == FS_OK || result == FS_NO_FILE || result == FS_FILE_EMPTY);
+}
+
+// 0 - Failure
+// 1 - OK/Does not exist/Skipped
+int
+read_cli_file(const char **cli_file, const char *dol_path) {
+	*cli_file = NULL;
+
+	size_t path_len = strlen(dol_path);
+	if (path_len < 5 || strncmp(dol_path + path_len - 4, ".dol", 4) != 0) {
+		kprintf("Not reading CLI file: DOL path does not end in \".dol\"\n");
+		return 1;
+	}
+
+	char path[path_len + 1];
+	memcpy(path, dol_path, path_len - 3);
+	path[path_len - 3] = 'c';
+	path[path_len - 2] = 'l';
+	path[path_len - 1] = 'i';
+	path[path_len] = '\0';
+
+	kprintf("Trying CLI file: %s\n", path);
+	FS_RESULT result = fs_read_file_string(cli_file, path);
+	if (result == FS_OK) {
+		kprintf("->> CLI file loaded\n");
+	}
+	return (result == FS_OK || result == FS_NO_FILE || result == FS_FILE_EMPTY);
+}
+
+// 0 - Device should not be used.
+// 1 - Device should be used.
+int
+load_config(BOOT_PAYLOAD *payload, int shortcut_index) {
+	// Attempt to read config file from mounted FAT device.
+	const char *config_file;
+	if (!read_config_file(&config_file, default_config_path)) {
+		return 1;
+	}
+	if (!config_file) {
+		return 0;
+	}
+
+	// Config file was found.
+	// Default to no action in case of failure.
+	int res = 1;
+	payload->type = BOOT_TYPE_NONE;
+
+	// Parse config file.
+	CONFIG config;
+	if (!parse_config(&config, config_file)) {
+		kprintf("->> !! Failed to parse config file\n");
+		return res;
+	}
+
+	// Set global state.
+	if (config.debug_enabled && !debug_enabled) {
+		kprintf("DEBUG: Debug enabled by config.\n");
+		debug_enabled = true;
+	}
+
+	// Print config.
+	if (debug_enabled) {
+		kprintf("\nDEBUG: About to print config. Press A to continue...\n");
+		wait_for_confirmation();
+		kprintf("----------\n");
+		print_config(&config);
+		kprintf("----------\n\n");
+		kprintf("DEBUG: Done printing. Press A to continue...\n");
+		wait_for_confirmation();
+	}
+
+	// Choose boot action.
+	if (config.shortcut_actions[shortcut_index].type == BOOT_TYPE_NONE) {
+		kprintf("\"%s\" shortcut not configured\n", shortcuts[shortcut_index].name);
+		shortcut_index = 0;
+	}
+	kprintf("->> Using \"%s\" shortcut\n", shortcuts[shortcut_index].name);
+	BOOT_ACTION *action = &config.shortcut_actions[shortcut_index];
+
+	// Process boot action.
+	if (action->type == BOOT_TYPE_ONBOARD) {
+		kprintf("->> Shortcut action: Reboot to onboard IPL\n");
+		payload->type = BOOT_TYPE_ONBOARD;
+		return res;
+	}
+	if (action->type == BOOT_TYPE_USBGECKO) {
+		kprintf("->> Shortcut action: Use USB Gecko\n");
+		payload->type = BOOT_TYPE_USBGECKO;
+		return res;
+	}
+	if (action->type != BOOT_TYPE_DOL) {
+		// Should never happen.
+		kprintf("->> !! Internal Error: Unexpeted boot type: %i\n", action->type);
+		return res;
+	}
+
+	kprintf("->> Shortcut action: Boot DOL\n");
+
+	// Read DOL file.
+	u8 *dol_file;
+	if (!read_dol_file(&dol_file, action->dol_path) || !dol_file) {
+		kprintf("->> !! Unable to read DOL\n");
+		return res;
+	}
+
+	// Attempt to read CLI file.
+	const char *cli_file;
+	if (!read_cli_file(&cli_file, action->dol_path)) {
+		return res;
+	}
+	if (!cli_file) {
+		kprintf("->> No CLI file\n");
+	}
+
+	// Combine CLI options from config and CLI file.
+	const char **cli_options_strs = NULL;
+	int num_cli_options_strs = 0;
+	if (action->num_dol_cli_options_strs > 0) {
+		cli_options_strs = action->dol_cli_options_strs;
+		num_cli_options_strs = action->num_dol_cli_options_strs;
+	}
+	if (cli_file) {
+		cli_options_strs =
+			realloc(cli_options_strs,
+		                (num_cli_options_strs + 1) * sizeof(const char *));
+		cli_options_strs[num_cli_options_strs++] = cli_file;
+	}
+
+	// Parse CLI options.
+	if (num_cli_options_strs > 0) {
+		int parse_res =
+			parse_cli_args(&payload->argv, cli_options_strs, num_cli_options_strs);
+		if (cli_file) {
+			free((void *) cli_file);
+		}
+		if (!parse_res) {
+			return res;
+		}
+	}
+
+	// Return DOL boot payload.
+	payload->type = BOOT_TYPE_DOL;
+	payload->dol_file = dol_file;
+	return res;
+}
+
+// 0 - Device should not be used.
+// 1 - Device should be used.
+int
+load_shortcut_files(BOOT_PAYLOAD *payload, int shortcut_index) {
+	// Attempt to read shortcut paths from from mounted FAT device.
+	u8 *dol_file = NULL;
+	const char *dol_path = shortcuts[shortcut_index].path;
+	if (!read_dol_file(&dol_file, dol_path)) {
+		return 1;
+	}
+	if (!dol_file && shortcut_index != 0) {
+		shortcut_index = 0;
+		dol_path = shortcuts[shortcut_index].path;
+		if (!read_dol_file(&dol_file, dol_path)) {
+			return 1;
+		}
+	}
+	if (!dol_file) {
+		return 0;
+	}
+
+	kprintf("Will boot DOL\n");
+
+	// Attempt to read CLI file.
+	const char *cli_file;
+	if (!read_cli_file(&cli_file, dol_path)) {
+		return 1;
+	}
+	if (!cli_file) {
+		kprintf("->> No CLI file\n");
+	}
+
+	// Parse CLI file.
+	if (cli_file) {
+		int res = parse_cli_args(&payload->argv, &cli_file, 1);
+		free((void *) cli_file);
+		if (!res) {
+			return 1;
+		}
+	}
+
+	payload->type = BOOT_TYPE_DOL;
+	payload->dol_file = dol_file;
+	return 1;
+}
+
+// 0 - Device should not be used.
+// 1 - Device should be used.
+int
+load_fat(
+	BOOT_PAYLOAD *payload,
+	const char *device_name,
+	const DISC_INTERFACE *iface,
+	int shortcut_index
+) {
 	int res = 0;
 
-	kprintf("Trying %s\n", slot_name);
+	kprintf("Trying %s\n", device_name);
 
-	FATFS fs;
-	iface = iface_;
-	FRESULT mount_result = f_mount(&fs, "", 1);
-	if (mount_result != FR_OK) {
-		kprintf("Couldn't mount %s: %s\n", slot_name, get_fresult_message(mount_result));
+	// Mount device.
+	FS_RESULT result = fs_mount(iface);
+	if (result != FS_OK) {
+		kprintf("Couldn't mount %s: %s\n", device_name, get_fs_result_message(result));
 		goto end;
 	}
 
-	char name[256];
-	f_getlabel(slot_name, name, NULL);
-	kprintf("Mounted %s as %s\n", name, slot_name);
+	char volume_label[256];
+	fs_get_volume_label(device_name, volume_label);
+	kprintf("Mounted \"%s\" volume from %s\n", volume_label, device_name);
 
-	for (int i = 0; i < num_paths; ++i) {
-		char *path = paths[i];
-		kprintf("Reading %s\n", path);
-		FIL file;
-		FRESULT open_result = f_open(&file, path, FA_READ);
-		if (open_result != FR_OK) {
-			kprintf("Failed to open file: %s\n", get_fresult_message(open_result));
-			continue;
-		}
+	// Attempt to load config or shortcut files.
+	res = (load_config(payload, shortcut_index) || load_shortcut_files(payload, shortcut_index)
+	);
 
-		size_t size = f_size(&file);
-		dol_alloc(size);
-		if (!dol) {
-			continue;
-		}
-		UINT _;
-		f_read(&file, dol, size, &_);
-		f_close(&file);
-
-		// Attempt to load and parse CLI file
-		load_parse_cli(path);
-
-		res = 1;
-		break;
-	}
-
-	kprintf("Unmounting %s\n", slot_name);
-	iface->shutdown();
-	iface = NULL;
+	kprintf("Unmounting %s\n", device_name);
+	fs_unmount();
 
 end:
 	return res;
@@ -203,27 +329,18 @@ convert_int(unsigned int in) {
 #define GC_READY 0x88
 #define GC_OK 0x89
 
+// 0 - Device should not be used.
+// 1 - Device should be used.
 int
-load_usb(char slot) {
+load_usb(BOOT_PAYLOAD *payload, char slot) {
+	int res = 0;
+	int channel = slot == 'B' ? 1 : 0;
+
 	kprintf("Trying USB Gecko in slot %c\n", slot);
-
-	int channel, res = 1;
-
-	switch (slot) {
-	case 'B':
-		channel = 1;
-		break;
-
-	case 'A':
-	default:
-		channel = 0;
-		break;
-	}
 
 	if (!usb_isgeckoalive(channel)) {
 		kprintf("Not present\n");
-		res = 0;
-		goto end;
+		return res;
 	}
 
 	usb_flush(channel);
@@ -241,12 +358,13 @@ load_usb(char slot) {
 		current_time = gettime();
 		if (diff_sec(start_time, current_time) >= 5) {
 			kprintf("PC did not respond in time\n");
-			res = 0;
-			goto end;
+			return res;
 		}
 
 		usb_recvbuffer_safe_ex(channel, &data, 1, 10); // 10 retries
 	}
+
+	res = 1;
 
 	if (data == PC_READY) {
 		kprintf("Respond with OK\n");
@@ -261,15 +379,20 @@ load_usb(char slot) {
 	usb_recvbuffer_safe(channel, &size, 4);
 	size = convert_int(size);
 
-	dol_alloc(size);
-	unsigned char *pointer = dol;
+	if (size <= 0) {
+		kprintf("DOL is empty\n");
+		return res;
+	}
+	kprintf("DOL size is %iB\n", size);
 
-	if (!dol) {
-		res = 0;
-		goto end;
+	u8 *dol_file = (u8 *) malloc(size);
+	if (!dol_file) {
+		kprintf("Couldn't allocate memory for DOL file\n");
+		return res;
 	}
 
 	kprintf("Receiving file...\n");
+	unsigned char *pointer = dol_file;
 	while (size > 0xF7D8) {
 		usb_recvbuffer_safe(channel, (void *) pointer, 0xF7D8);
 		size -= 0xF7D8;
@@ -279,33 +402,19 @@ load_usb(char slot) {
 		usb_recvbuffer_safe(channel, (void *) pointer, size);
 	}
 
-end:
+	payload->type = BOOT_TYPE_DOL;
+	payload->dol_file = dol_file;
 	return res;
 }
 
-extern u8 __xfb[];
-
-void
-delay_exit() {
-	// Wait while the d-pad down direction or reset button is held.
-	if (all_buttons_held & PAD_BUTTON_DOWN) {
-		kprintf("(release d-pad down to continue)\n");
-	}
-	if (SYS_ResetButtonDown()) {
-		kprintf("(release reset button to continue)\n");
-	}
-
-	while (all_buttons_held & PAD_BUTTON_DOWN || SYS_ResetButtonDown()) {
-		VIDEO_WaitVSync();
-		PAD_ScanPads();
-		all_buttons_held =
-			(PAD_ButtonsHeld(PAD_CHAN0) | PAD_ButtonsHeld(PAD_CHAN1)
-		         | PAD_ButtonsHeld(PAD_CHAN2) | PAD_ButtonsHeld(PAD_CHAN3));
-	}
-}
-
+#ifdef EMU_BUILD
 int
-main() {
+main_capture(int _argc, char **_argv) {
+#else
+int
+main(int _argc, char **_argv) {
+#endif
+#ifndef EMU_BUILD
 	// GCVideo takes a while to boot up.
 	// If VIDEO_GetPreferredMode is called before it's done,
 	// it will not see the "component cable", and default to interlaced mode,
@@ -319,11 +428,15 @@ main() {
 			}
 		}
 	}
+#endif
 
 	VIDEO_Init();
 	PAD_Init();
 	GXRModeObj *rmode = VIDEO_GetPreferredMode(NULL);
 	VIDEO_Configure(rmode);
+#ifdef EMU_BUILD
+	__xfb = MEM_K0_TO_K1(SYS_AllocateFramebuffer(rmode));
+#endif
 	VIDEO_SetNextFramebuffer(__xfb);
 	VIDEO_SetBlack(FALSE);
 	VIDEO_Flush();
@@ -334,6 +447,9 @@ main() {
 	);
 
 	kprintf("\n\ngekkoboot %s\n", version);
+#ifdef EMU_BUILD
+	kprintf("EMU_BUILD\n");
+#endif
 
 	// Disable Qoob
 	u32 val = 6 << 24;
@@ -346,106 +462,177 @@ main() {
 	EXI_Sync(EXI_CHANNEL_0);
 	EXI_Deselect(EXI_CHANNEL_0);
 	EXI_Unlock(EXI_CHANNEL_0);
+	// Since we've disabled the Qoob, we wil reboot to the Nintendo IPL
 
-	PAD_ScanPads();
+	// Check argv flags.
+	int should_ask = false;
+	for (int i = 0; i < _argc; i++) {
+		if (strcmp(_argv[i], "--debug") == 0) {
+			kprintf("DEBUG: Debug enabled by flag.\n");
+			debug_enabled = true;
+		} else if (strcmp(_argv[i], "--ask") == 0) {
+			should_ask = true;
+		}
+	}
 
-	all_buttons_held =
-		(PAD_ButtonsHeld(PAD_CHAN0) | PAD_ButtonsHeld(PAD_CHAN1)
-	         | PAD_ButtonsHeld(PAD_CHAN2) | PAD_ButtonsHeld(PAD_CHAN3));
+#ifdef EMU_BUILD
+	kprintf("DEBUG: Debug enabled by EMU_BUILD.\n");
+	debug_enabled = true;
+	should_ask = true;
+#endif
+	if (should_ask) {
+		kprintf("DEBUG: Press button...\n");
+		do {
+			VIDEO_WaitVSync();
+			scan_all_buttons_held();
+		} while (all_buttons_held == 0 || all_buttons_held == PAD_BUTTON_DOWN);
+	} else {
+		scan_all_buttons_held();
+	}
+
+	// Check if d-pad down direction or reset button is held.
+	if (all_buttons_held & PAD_BUTTON_DOWN || SYS_ResetButtonDown()) {
+		kprintf("DEBUG: Debug enabled.\n");
+		debug_enabled = true;
+	}
 
 	if (all_buttons_held & PAD_BUTTON_LEFT || SYS_ResetButtonDown()) {
-		// Since we've disabled the Qoob, we wil reboot to the Nintendo IPL
-		kprintf("Skipped. Rebooting into original IPL...\n");
+		kprintf("Skip enabled. Rebooting into original IPL...\n\n");
 		delay_exit();
 		return 0;
 	}
 
-	char *paths[2];
-	int num_paths = 0;
+	int mram_size = SYS_GetArenaHi() - SYS_GetArenaLo();
+	kprintf("Memory available: %iB\n", mram_size);
 
-	for (int i = 0; i < num_shortcuts; i++) {
+	// Detect selected shortcut.
+	int shortcut_index = 0;
+	for (int i = 1; i < NUM_SHORTCUTS; i++) {
 		if (all_buttons_held & shortcuts[i].pad_buttons) {
-			paths[num_paths++] = shortcuts[i].path;
+			kprintf("->> \"%s\" shortcut selected\n", shortcuts[i].name);
+			shortcut_index = i;
 			break;
 		}
 	}
-
-	paths[num_paths++] = default_path;
-
-	if (load_usb('B')) {
-		goto load;
+	if (shortcut_index == 0) {
+		kprintf("->> Using default shortcut\n");
 	}
 
-	if (load_fat("sdb", &__io_gcsdb, paths, num_paths)) {
-		goto load;
+	// Init payload.
+	BOOT_PAYLOAD payload;
+	payload.type = BOOT_TYPE_NONE;
+	payload.dol_file = NULL;
+	payload.argv.argc = 0;
+	payload.argv.length = 0;
+	payload.argv.commandLine = NULL;
+	payload.argv.argvMagic = ARGV_MAGIC;
+
+#ifndef EMU_BUILD
+	// Attempt to load from each device.
+	int res =
+		(load_fat(&payload, "SD Gecko in slot B", &__io_gcsdb, shortcut_index)
+	         || load_fat(&payload, "SD Gecko in slot A", &__io_gcsda, shortcut_index)
+	         || load_fat(&payload, "SD2SP2", &__io_gcsd2, shortcut_index));
+
+	if (!res || payload.type == BOOT_TYPE_USBGECKO) {
+		payload.type = BOOT_TYPE_NONE;
+		res = (load_usb(&payload, 'B') || load_usb(&payload, 'A') || res);
+	}
+#else
+	int res = load_fat(&payload, "Wii SD", &__io_wiisd, shortcut_index);
+#endif
+
+	if (!res) {
+		// If we reach here, we did not find a device with any shortcut files.
+		kprintf("\nNo shortcuts found\n");
+		kprintf("Press A to reboot into onboard IPL...\n\n");
+		wait_for_confirmation();
+		return 0;
 	}
 
-	if (load_usb('A')) {
-		goto load;
+	if (payload.type == BOOT_TYPE_NONE) {
+		// If we reach here, we found a device with shortcut files but failed to load any
+		// shortcut.
+		kprintf("\nUnable to load shortcut\n");
+		kprintf("Press A to reboot into onboard IPL...\n\n");
+		wait_for_confirmation();
+		return 0;
 	}
 
-	if (load_fat("sda", &__io_gcsda, paths, num_paths)) {
-		goto load;
+	if (payload.type == BOOT_TYPE_ONBOARD) {
+		kprintf("Rebooting into onboard IPL...\n\n");
+		delay_exit();
+		return 0;
 	}
 
-	if (load_fat("sd2", &__io_gcsd2, paths, num_paths)) {
-		goto load;
+	if (payload.type != BOOT_TYPE_DOL) {
+		// Should never happen.
+		kprintf("\n->> !! Internal Error: Unexpected boot type: %i\n", payload.type);
+		kprintf("Press A to reboot into onboard IPL...\n\n");
+		wait_for_confirmation();
+		return 0;
 	}
 
-load:
-	if (!dol) {
-		kprintf("No DOL found! Halting.");
-		while (true) {
-			VIDEO_WaitVSync();
-		}
-	}
-
-	struct __argv dolargs;
-	dolargs.commandLine = (char *) NULL;
-	dolargs.length = 0;
-
-	// https://github.com/emukidid/swiss-gc/blob/f5319aab248287c847cb9468325ebcf54c993fb1/cube/swiss/source/aram/sidestep.c#L350
-	if (dol_argc) {
-		dolargs.argvMagic = ARGV_MAGIC;
-		dolargs.argc = dol_argc;
-		dolargs.length = 1;
-
-		for (int i = 0; i < dol_argc; i++) {
-			size_t arg_length = strlen(dol_argv[i]) + 1;
-			dolargs.length += arg_length;
-		}
-
-		kprintf("CLI argv size is %iB\n", dolargs.length);
-		dolargs.commandLine = (char *) malloc(dolargs.length);
-
-		if (!dolargs.commandLine) {
-			kprintf("Couldn't allocate memory for CLI argv\n");
-			dolargs.length = 0;
-		} else {
-			unsigned int position = 0;
-			for (int i = 0; i < dol_argc; i++) {
-				size_t arg_length = strlen(dol_argv[i]) + 1;
-				memcpy(dolargs.commandLine + position, dol_argv[i], arg_length);
-				position += arg_length;
+	// Print DOL args.
+	if (debug_enabled) {
+		if (payload.argv.length > 0) {
+			kprintf("\nDEBUG: About to print CLI args. Press A to continue...\n");
+			wait_for_confirmation();
+			kprintf("----------\n");
+			size_t position = 0;
+			for (int i = 0; i < payload.argv.argc; ++i) {
+				kprintf("arg%i: %s\n", i, payload.argv.commandLine + position);
+				position += strlen(payload.argv.commandLine + position) + 1;
 			}
-			dolargs.commandLine[dolargs.length - 1] = '\0';
-			DCStoreRange(dolargs.commandLine, dolargs.length);
+			kprintf("----------\n\n");
+		} else {
+			kprintf("DEBUG: No CLI args\n");
 		}
 	}
 
+	// Prepare DOL argv.
+	if (payload.argv.length > 0) {
+		DCStoreRange(payload.argv.commandLine, payload.argv.length);
+	}
+
+	kprintf("Booting DOL...\n");
+
+#ifndef EMU_BUILD
+	// Load stub.
 	memcpy((void *) STUB_ADDR, stub, (size_t) stub_size);
 	DCStoreRange((void *) STUB_ADDR, (u32) stub_size);
 
 	delay_exit();
 
+	if (debug_enabled) {
+		kprintf("DEBUG: Loading DOL...\n");
+	}
+
+	// Boot DOL.
 	SYS_ResetSystem(SYS_SHUTDOWN, 0, FALSE);
 	SYS_SwitchFiber(
-		(intptr_t) dol,
+		(intptr_t) payload.dol_file,
 		0,
-		(intptr_t) dolargs.commandLine,
-		dolargs.length,
+		(intptr_t) payload.argv.commandLine,
+		payload.argv.length,
 		STUB_ADDR,
 		STUB_STACK
 	);
+
+	// Will never reach here.
 	return 0;
+#else
+	kprintf("EMU_BUILD: Success!\n");
+	return 0;
+#endif
 }
+
+#ifdef EMU_BUILD
+int
+main(int _argc, char **_argv) {
+	int res = main_capture(_argc, _argv);
+	kprintf("EMU_BUILD: Exited with %i. Press A to exit...\n", res);
+	wait_for_confirmation();
+	return res;
+}
+#endif

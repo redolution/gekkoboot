@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+
+src=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
+
+if [[ "$(readlink -f "$PWD")" == "$src" ]]; then
+    printf '%s\n' 'This script must be run out of tree!'
+    exit 1
+fi
+
+tmp=$(mktemp -t Makefile.XXXXXXXXXX)
+trap 'rm -f "$tmp"' EXIT
+
+function write() {
+    printf '%s\n' "$*" >> "$tmp"
+}
+
+write '# Automatically generated file'
+
+for arg in "$@"; do
+    val="${arg#*=}"
+    case $arg in
+        --prefix=*)
+            write INSTALL_PREFIX := "$val"
+            ;;
+        --incdir=*)
+            write INCDEST := "$val"
+            ;;
+        --libdir=*)
+            write LIBDEST := "$val"
+            ;;
+        *)
+            printf '%s\n' "$arg: Invalid argument"
+            exit 1
+    esac
+done
+
+write SRCDIR := "$src"
+write 'default:'
+write '	$(MAKE) -C $(SRCDIR) wii-release'
+write 'install:'
+write '	@mkdir -p $(DESTDIR)$(INSTALL_PREFIX)'
+write '	@mkdir -p $(DESTDIR)$(INSTALL_PREFIX)/$(INCDEST)'
+write '	@mkdir -p $(DESTDIR)$(INSTALL_PREFIX)/$(LIBDEST)'
+write '	@cp -frv $(SRCDIR)/include/* -t $(DESTDIR)$(INSTALL_PREFIX)/$(INCDEST)'
+write '	@cp -frv $(SRCDIR)/libogc2/lib/* -t $(DESTDIR)$(INSTALL_PREFIX)/$(LIBDEST)'
+write '	@cp -frv $(SRCDIR)/libfat_license.txt $(DESTDIR)$(INSTALL_PREFIX)'
+
+cp "$tmp" Makefile

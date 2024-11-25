@@ -135,7 +135,7 @@ load_parse_cli(char *path) {
 }
 
 int
-load_fat(const char *slot_name, const DISC_INTERFACE *iface_, char **paths, int num_paths) {
+load_fat(const char *slot_name, DISC_INTERFACE *iface_, char **paths, int num_paths) {
 	int res = 0;
 
 	kprintf("Trying %s\n", slot_name);
@@ -179,7 +179,7 @@ load_fat(const char *slot_name, const DISC_INTERFACE *iface_, char **paths, int 
 	}
 
 	kprintf("Unmounting %s\n", slot_name);
-	iface->shutdown();
+	iface->shutdown(iface);
 	iface = NULL;
 
 end:

@@ -4,7 +4,7 @@
 
 #include "ffshim.h"
 
-const DISC_INTERFACE *iface = NULL;
+DISC_INTERFACE *iface = NULL;
 
 DSTATUS
 disk_status(BYTE pdrv) {
@@ -12,7 +12,7 @@ disk_status(BYTE pdrv) {
 
 	if (iface == NULL) {
 		return STA_NOINIT;
-	} else if (!iface->isInserted()) {
+	} else if (!iface->isInserted(iface)) {
 		return STA_NOINIT;
 	}
 
@@ -27,18 +27,18 @@ disk_initialize(BYTE pdrv) {
 		goto noinit;
 	}
 
-	if (!iface->startup()) {
+	if (!iface->startup(iface)) {
 		goto noinit;
 	}
 
-	if (!iface->isInserted()) {
+	if (!iface->isInserted(iface)) {
 		goto shutdown;
 	}
 
 	return 0;
 
 shutdown:
-	iface->shutdown();
+	iface->shutdown(iface);
 noinit:
 	iface = NULL;
 	return STA_NOINIT;
@@ -52,7 +52,7 @@ disk_read(BYTE pdrv, BYTE *buff, LBA_t sector, UINT count) {
 		return RES_NOTRDY;
 	}
 
-	if (iface->readSectors(sector, count, buff)) {
+	if (iface->readSectors(iface, sector, count, buff)) {
 		return RES_OK;
 	} else {
 		return RES_ERROR;

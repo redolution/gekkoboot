@@ -3,6 +3,6 @@
 
 #include <ogc/disc_io.h>
 
-extern const DISC_INTERFACE *iface;
+extern DISC_INTERFACE *iface;
 
 #endif

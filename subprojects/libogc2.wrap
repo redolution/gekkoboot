@@ -1,5 +1,5 @@
 [wrap-git]
 url = https://github.com/extremscorner/libogc2.git
-revision = 45717c8317772f067b875d04d5a18a981dfe51fd
+revision = b204695faf6a7df4cb816bfde1148c57d2ec3f36
 #depth = 1
 diff_files = libogc2.patch

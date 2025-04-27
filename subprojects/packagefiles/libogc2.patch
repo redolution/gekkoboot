@@ -1,4 +1,4 @@
-From 4a63efe11b620e170f572c0e760bbbc59fd786ae Mon Sep 17 00:00:00 2001
+From f376e1b0ad3bf5c41669fcbf41450216540e7bc3 Mon Sep 17 00:00:00 2001
 From: novenary <novenary@kwak.zip>
 Date: Wed, 29 Nov 2023 18:46:32 +0200
 Subject: [PATCH 1/7] Fix out-of-tree builds
@@ -11,10 +11,10 @@ Subject: [PATCH 1/7] Fix out-of-tree builds
  4 files changed, 40 insertions(+), 28 deletions(-)
 
 diff --git a/.github/workflows/continuous-integration-workflow.yml b/.github/workflows/continuous-integration-workflow.yml
-index 8f8e9b0..1651810 100644
+index df3c97d..ad07c48 100644
 --- a/.github/workflows/continuous-integration-workflow.yml
 +++ b/.github/workflows/continuous-integration-workflow.yml
-@@ -27,7 +27,9 @@ jobs:
+@@ -39,7 +39,9 @@ jobs:
          path: libntfs
  
      - name: Build libogc2
@@ -24,7 +24,7 @@ index 8f8e9b0..1651810 100644
 +        make -C build -f ../Makefile install
        working-directory: libogc2
  
-     - name: Build libfat
+     - name: Build libdvm
 diff --git a/.gitignore b/.gitignore
 index d1a46b2..19afba3 100644
 --- a/.gitignore
@@ -35,29 +35,29 @@ index d1a46b2..19afba3 100644
  deps
  include
 diff --git a/Doxyfile b/Doxyfile
-index 92e028c..aa53840 100644
+index 5e987e7..82e55e2 100644
 --- a/Doxyfile
 +++ b/Doxyfile
-@@ -38,7 +38,7 @@ PROJECT_NUMBER         = 1.0
- # If a relative path is entered, it will be relative to the location 
- # where doxygen was started. If left blank the current directory will be used.
+@@ -74,7 +74,7 @@ PROJECT_ICON           =
+ # entered, it will be relative to the location where Doxygen was started. If
+ # left blank the current directory will be used.
  
 -OUTPUT_DIRECTORY       = docs
 +OUTPUT_DIRECTORY       = $(BUILDDIR)/docs
  
- # If the CREATE_SUBDIRS tag is set to YES, then doxygen will create 
- # 4096 sub-directories (in 2 levels) under the output directory of each output 
-@@ -579,7 +579,7 @@ WARN_FORMAT            = "$file:$line: $text"
- # and error messages should be written. If left blank the output is written 
- # to stderr.
+ # If the CREATE_SUBDIRS tag is set to YES then Doxygen will create up to 4096
+ # sub-directories (in 2 levels) under the output directory of each output format
+@@ -953,7 +953,7 @@ WARN_LINE_FORMAT       = "at line $line of file $file"
+ # specified the warning and error messages are written to standard output
+ # (stdout).
  
 -WARN_LOGFILE           = warn.log
 +WARN_LOGFILE           = $(BUILDDIR)/warn.log
  
  #---------------------------------------------------------------------------
- # configuration options related to the input files
+ # Configuration options related to the input files
 diff --git a/Makefile b/Makefile
-index 56ade00..f40a1e1 100644
+index c741a8a..702e3fb 100644
 --- a/Makefile
 +++ b/Makefile
 @@ -10,6 +10,8 @@ ifeq ($(strip $(DEVKITPPC)),)
@@ -69,7 +69,7 @@ index 56ade00..f40a1e1 100644
  export PATH	:=	$(DEVKITPPC)/bin:$(PATH)
  
  export LIBOGC_MAJOR	:= 2
-@@ -26,7 +28,8 @@ VERSTRING	:=	$(LIBOGC_MAJOR).$(LIBOGC_MINOR).$(LIBOGC_PATCH)
+@@ -26,7 +28,8 @@ VERSTRING	:=	$(shell printf "r%s.%s" "$$(git rev-list --count HEAD)" "$$(git rev
  #---------------------------------------------------------------------------------
  ifeq ($(strip $(PLATFORM)),)
  #---------------------------------------------------------------------------------
@@ -125,14 +125,14 @@ index 56ade00..f40a1e1 100644
  
  
  #---------------------------------------------------------------------------------
--gc/ogc/libversion.h : Makefile
+-gc/ogc/libversion.h: .git/HEAD .git/index Makefile
 +gc/ogc/libversion.h : $(CURFILE)
  #---------------------------------------------------------------------------------
 +	@[ -d gc/ogc ] || mkdir -p gc/ogc
  	@echo "#ifndef __OGC_LIBVERSION_H__" > $@
  	@echo "#define __OGC_LIBVERSION_H__" >> $@
  	@echo >> $@
-@@ -265,7 +271,7 @@ $(WIIUSELIB).a: $(WIIUSEOBJ)
+@@ -267,7 +273,7 @@ $(WIIUSELIB).a: $(WIIUSEOBJ)
  .PHONY: libs wii cube install-headers install uninstall dist docs
  
  #---------------------------------------------------------------------------------
@@ -141,7 +141,7 @@ index 56ade00..f40a1e1 100644
  #---------------------------------------------------------------------------------
  	@mkdir -p $(INCDIR)
  	@mkdir -p $(INCDIR)/ogc/machine
-@@ -276,16 +282,17 @@ install-headers:
+@@ -278,16 +284,17 @@ install-headers:
  	@mkdir -p $(INCDIR)/sdcard
  	@mkdir -p $(INCDIR)/di
  	@mkdir -p $(INCDIR)/wiikeyboard
@@ -169,7 +169,7 @@ index 56ade00..f40a1e1 100644
  
  #---------------------------------------------------------------------------------
  install: wii cube install-headers
-@@ -293,8 +300,8 @@ install: wii cube install-headers
+@@ -295,8 +302,8 @@ install: wii cube install-headers
  	@mkdir -p $(DESTDIR)$(DEVKITPRO)/libogc2
  	@cp -frv include $(DESTDIR)$(DEVKITPRO)/libogc2
  	@cp -frv lib $(DESTDIR)$(DEVKITPRO)/libogc2
@@ -180,7 +180,7 @@ index 56ade00..f40a1e1 100644
  
  #---------------------------------------------------------------------------------
  uninstall:
-@@ -304,9 +311,10 @@ uninstall:
+@@ -306,9 +313,10 @@ uninstall:
  #---------------------------------------------------------------------------------
  dist: wii cube install-headers
  #---------------------------------------------------------------------------------
@@ -194,7 +194,7 @@ index 56ade00..f40a1e1 100644
  	@tar -cvjf libogc2-$(VERSTRING).tar.bz2 include lib libogc_license.txt gamecube_rules wii_rules
  
  
-@@ -327,6 +335,7 @@ libs: $(LIBRARIES)
+@@ -329,6 +337,7 @@ libs: $(LIBRARIES)
  clean:
  #---------------------------------------------------------------------------------
  	rm -fr wii cube
@@ -202,19 +202,19 @@ index 56ade00..f40a1e1 100644
  	rm -fr $(DEPS)
  	rm -fr $(LIBS)
  	rm -fr $(INCDIR)
-@@ -335,6 +344,6 @@ clean:
+@@ -337,6 +346,6 @@ clean:
  #---------------------------------------------------------------------------------
  docs: install-headers
  #---------------------------------------------------------------------------------
--	doxygen Doxyfile
-+	@cd $(BASEDIR); doxygen Doxyfile
+-	VERSTRING="$(VERSTRING)" doxygen Doxyfile
++	@cd $(BASEDIR); VERSTRING="$(VERSTRING)" doxygen Doxyfile
  
  -include $(DEPSDIR)/*.d
 -- 
-2.44.1
+2.47.2
 
 
-From 649ca8b8f472c7baf089ce3c8eabe9f1a540ebc8 Mon Sep 17 00:00:00 2001
+From f7af2086b8649846609baa5651c4fd20ca2b93ff Mon Sep 17 00:00:00 2001
 From: novenary <novenary@kwak.zip>
 Date: Wed, 29 Nov 2023 19:08:07 +0200
 Subject: [PATCH 2/7] Make optimization level configurable
@@ -224,7 +224,7 @@ Subject: [PATCH 2/7] Make optimization level configurable
  1 file changed, 2 insertions(+), 1 deletion(-)
 
 diff --git a/Makefile b/Makefile
-index f40a1e1..c875d4f 100644
+index 702e3fb..15858d5 100644
 --- a/Makefile
 +++ b/Makefile
 @@ -102,7 +102,8 @@ endif
@@ -238,10 +238,10 @@ index f40a1e1..c875d4f 100644
  
  #---------------------------------------------------------------------------------
 -- 
-2.44.1
+2.47.2
 
 
-From 7e57e51c0b7709213aa8172e3dc090f1fa815b90 Mon Sep 17 00:00:00 2001
+From bb86319812581dbae4b319b205e0a7a470e92a68 Mon Sep 17 00:00:00 2001
 From: novenary <novenary@kwak.zip>
 Date: Wed, 29 Nov 2023 22:24:26 +0200
 Subject: [PATCH 3/7] Allow selective building of libraries and platforms
@@ -253,7 +253,7 @@ make -C build -f ../Makefile -j10 PLATFORMS=cube LIBRARIES=ogc  19.28s user 1.93
  1 file changed, 10 insertions(+), 7 deletions(-)
 
 diff --git a/Makefile b/Makefile
-index c875d4f..99c436c 100644
+index 15858d5..fc92c0d 100644
 --- a/Makefile
 +++ b/Makefile
 @@ -186,7 +186,8 @@ WIIKEYBLIBOBJ	:=	usbkeyboard.o keyboard.o ukbdmap.o wskbdutil.o
@@ -266,7 +266,7 @@ index c875d4f..99c436c 100644
  
  #---------------------------------------------------------------------------------
  wii: gc/ogc/libversion.h
-@@ -296,7 +297,7 @@ install-headers: gc/ogc/libversion.h
+@@ -298,7 +299,7 @@ install-headers: gc/ogc/libversion.h
  	@cp $(BASEDIR)/gc/wiikeyboard/*.h $(INCDIR)/wiikeyboard
  
  #---------------------------------------------------------------------------------
@@ -275,7 +275,7 @@ index c875d4f..99c436c 100644
  #---------------------------------------------------------------------------------
  	@mkdir -p $(DESTDIR)$(DEVKITPRO)/libogc2
  	@cp -frv include $(DESTDIR)$(DEVKITPRO)/libogc2
-@@ -310,7 +311,7 @@ uninstall:
+@@ -312,7 +313,7 @@ uninstall:
  	@rm -frv $(DESTDIR)$(DEVKITPRO)/libogc2
  
  #---------------------------------------------------------------------------------
@@ -284,7 +284,7 @@ index c875d4f..99c436c 100644
  #---------------------------------------------------------------------------------
  	@tar -C $(BASEDIR) --exclude-vcs --exclude-vcs-ignores --exclude .github \
  		-cvjf $(BUILDDIR)/libogc2-src-$(VERSTRING).tar.bz2 .
-@@ -319,17 +320,19 @@ dist: wii cube install-headers
+@@ -321,17 +322,19 @@ dist: wii cube install-headers
  	@tar -cvjf libogc2-$(VERSTRING).tar.bz2 include lib libogc_license.txt gamecube_rules wii_rules
  
  
@@ -309,10 +309,10 @@ index c875d4f..99c436c 100644
  
  #---------------------------------------------------------------------------------
 -- 
-2.44.1
+2.47.2
 
 
-From dc27c7f958c5753b6e80dc188fa59d4b308d1a4d Mon Sep 17 00:00:00 2001
+From 82362bc11f3069bc25602c29bac0129266ef7beb Mon Sep 17 00:00:00 2001
 From: novenary <novenary@kwak.zip>
 Date: Thu, 30 Nov 2023 00:13:00 +0200
 Subject: [PATCH 4/7] Support custom prefix, incdir and libdir
@@ -339,7 +339,7 @@ index 19afba3..68c7041 100644
  docs
  warn.log
 diff --git a/Makefile b/Makefile
-index 99c436c..ee01ef3 100644
+index fc92c0d..ccdb5d8 100644
 --- a/Makefile
 +++ b/Makefile
 @@ -2,9 +2,16 @@
@@ -359,7 +359,7 @@ index 99c436c..ee01ef3 100644
  
  ifeq ($(strip $(DEVKITPPC)),)
  $(error "Please set DEVKITPPC in your environment. export DEVKITPPC=<path to>devkitPPC")
-@@ -226,6 +233,16 @@ gc/ogc/libversion.h : $(CURFILE)
+@@ -228,6 +235,16 @@ gc/ogc/libversion.h : $(CURFILE)
  	@echo >> $@
  	@echo "#endif // __OGC_LIBVERSION_H__" >> $@
  
@@ -376,7 +376,7 @@ index 99c436c..ee01ef3 100644
  #---------------------------------------------------------------------------------
  asndlib.o: asnd_dsp_mixer.h
  #---------------------------------------------------------------------------------
-@@ -297,27 +314,31 @@ install-headers: gc/ogc/libversion.h
+@@ -299,27 +316,31 @@ install-headers: gc/ogc/libversion.h
  	@cp $(BASEDIR)/gc/wiikeyboard/*.h $(INCDIR)/wiikeyboard
  
  #---------------------------------------------------------------------------------
@@ -418,7 +418,7 @@ index 99c436c..ee01ef3 100644
  
  
  ifeq ($(strip $(LIBRARIES)),)
-@@ -340,6 +361,7 @@ clean:
+@@ -342,6 +363,7 @@ clean:
  #---------------------------------------------------------------------------------
  	rm -fr wii cube
  	rm -fr gc/ogc/libversion.h
@@ -463,10 +463,10 @@ index 4c979ed..8a8b3f5 100644
  MACHDEP =  -DGEKKO -mrvl -mcpu=750 -meabi -mhard-float
  
 -- 
-2.44.1
+2.47.2
 
 
-From f7288ac82a71cc8672daae9037b851e0b8f2e97c Mon Sep 17 00:00:00 2001
+From 2714f6dc6718f95958013e97684f30139b347af4 Mon Sep 17 00:00:00 2001
 From: novenary <novenary@kwak.zip>
 Date: Thu, 30 Nov 2023 21:06:45 +0200
 Subject: [PATCH 5/7] Add meson wrapper
@@ -607,10 +607,10 @@ index 0000000..dd5db87
 +option('platform', type: 'combo', choices: ['cube', 'wii'])
 +option('libraries', type: 'array')
 -- 
-2.44.1
+2.47.2
 
 
-From 1caaceb71c2bfbc17750be150a02209ff245a07f Mon Sep 17 00:00:00 2001
+From c5207e3d3e35881bfc7c82f2ccdbf96c23604ef8 Mon Sep 17 00:00:00 2001
 From: novenary <novenary@kwak.zip>
 Date: Tue, 5 Dec 2023 20:33:04 +0200
 Subject: [PATCH 6/7] Make console_font_8x16 weak
@@ -630,10 +630,10 @@ index 21ef8da..40c4740 100644
  	/* 0 0x00 '^@' */
  	0x00, /* 00000000 */
 -- 
-2.44.1
+2.47.2
 
 
-From ccee14a8d4308d890a10b34ea65d2fd637d6189d Mon Sep 17 00:00:00 2001
+From f244e6d30bd19a152911ddb7f42d54608c2ef50c Mon Sep 17 00:00:00 2001
 From: novenary <novenary@kwak.zip>
 Date: Tue, 5 Dec 2023 22:07:32 +0200
 Subject: [PATCH 7/7] Make builds deterministic
@@ -643,12 +643,12 @@ Subject: [PATCH 7/7] Make builds deterministic
 
 This allows consecutive rebuilds to produce identical binaries.
 ---
- Makefile        | 5 +----
+ Makefile        | 2 +-
  libogc/system.c | 3 +--
- 2 files changed, 2 insertions(+), 6 deletions(-)
+ 2 files changed, 2 insertions(+), 3 deletions(-)
 
 diff --git a/Makefile b/Makefile
-index ee01ef3..38959ac 100644
+index ccdb5d8..3f2c448 100644
 --- a/Makefile
 +++ b/Makefile
 @@ -26,10 +26,10 @@ export LIBOGC_MINOR	:= 1
@@ -660,24 +660,14 @@ index ee01ef3..38959ac 100644
  BUILD		:=	build
  
 -DATESTRING	:=	$(shell date +%Y%m%d)
- VERSTRING	:=	$(LIBOGC_MAJOR).$(LIBOGC_MINOR).$(LIBOGC_PATCH)
+ VERSTRING	:=	$(shell printf "r%s.%s" "$$(git rev-list --count HEAD)" "$$(git rev-parse --short=7 HEAD)")
  
  #---------------------------------------------------------------------------------
-@@ -226,9 +226,6 @@ gc/ogc/libversion.h : $(CURFILE)
- 	@echo "#define _V_MINOR_	$(LIBOGC_MINOR)" >> $@
- 	@echo "#define _V_PATCH_	$(LIBOGC_PATCH)" >> $@
- 	@echo >> $@
--	@echo "#define _V_DATE_			__DATE__" >> $@
--	@echo "#define _V_TIME_			__TIME__" >> $@
--	@echo >> $@
- 	@echo '#define _V_STRING "libOGC Release '$(LIBOGC_MAJOR).$(LIBOGC_MINOR).$(LIBOGC_PATCH)'"' >> $@
- 	@echo >> $@
- 	@echo "#endif // __OGC_LIBVERSION_H__" >> $@
 diff --git a/libogc/system.c b/libogc/system.c
-index bf07905..b4da7f9 100644
+index 69e7016..d8b97db 100644
 --- a/libogc/system.c
 +++ b/libogc/system.c
-@@ -237,7 +237,6 @@ static sys_resetinfo mem_resetinfo = {
+@@ -246,7 +246,6 @@ static sys_resetinfo mem_resetinfo = {
  	127
  };
  
@@ -685,7 +675,7 @@ index bf07905..b4da7f9 100644
  static const char *__sys_versionbuild;
  
  static __inline__ alarm_st* __lwp_syswd_open(syswd_t wd)
-@@ -1034,7 +1033,7 @@ void* __SYS_GetIPCBufferHi(void)
+@@ -1036,7 +1035,7 @@ void* __SYS_GetIPCBufferHi(void)
  #endif
  
  void _V_EXPORTNAME(void)
@@ -695,5 +685,5 @@ index bf07905..b4da7f9 100644
  #if defined(HW_RVL)
  void __SYS_DoPowerCB(void)
 -- 
-2.44.1
+2.47.2
 

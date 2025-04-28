@@ -15,6 +15,7 @@ packer_stub = static_library(
     ],
     override_options: {
         'c_std': 'gnu17',
+	'b_lto': true,
     },
     link_with: packer_crt,
     dependencies: [

@@ -466,17 +466,17 @@ index 4c979ed..8a8b3f5 100644
 2.47.2
 
 
-From 2714f6dc6718f95958013e97684f30139b347af4 Mon Sep 17 00:00:00 2001
+From f451b7143976e6bec641904b50ac5542391e7ecf Mon Sep 17 00:00:00 2001
 From: novenary <novenary@kwak.zip>
 Date: Thu, 30 Nov 2023 21:06:45 +0200
 Subject: [PATCH 5/7] Add meson wrapper
 
 ---
  .gitignore    |  1 +
- configure     | 58 +++++++++++++++++++++++++++++++++++++++++++++++++++
- meson.build   | 38 +++++++++++++++++++++++++++++++++
+ configure     | 61 +++++++++++++++++++++++++++++++++++++++++++++++++++
+ meson.build   | 39 ++++++++++++++++++++++++++++++++
  meson.options |  2 ++
- 4 files changed, 99 insertions(+)
+ 4 files changed, 103 insertions(+)
  create mode 100755 configure
  create mode 100644 meson.build
  create mode 100644 meson.options
@@ -492,10 +492,10 @@ index 68c7041..8f31e71 100644
 +.meson-subproject-wrap-hash.txt
 diff --git a/configure b/configure
 new file mode 100755
-index 0000000..f9f3e52
+index 0000000..31cd8fe
 --- /dev/null
 +++ b/configure
-@@ -0,0 +1,58 @@
+@@ -0,0 +1,61 @@
 +#!/usr/bin/env bash
 +
 +src=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
@@ -529,6 +529,9 @@ index 0000000..f9f3e52
 +        --libdir=*)
 +            write export LIBDEST := "$val"
 +            ;;
++        --bindir=*)
++            # no-op
++            ;;
 +        --opt-level=*)
 +            write export OPTLEVEL := "$val"
 +            ;;
@@ -556,10 +559,10 @@ index 0000000..f9f3e52
 +cp "$tmp" Makefile
 diff --git a/meson.build b/meson.build
 new file mode 100644
-index 0000000..1ce551a
+index 0000000..8045eef
 --- /dev/null
 +++ b/meson.build
-@@ -0,0 +1,38 @@
+@@ -0,0 +1,39 @@
 +project(
 +    'libogc2',
 +    ['c'],
@@ -585,6 +588,7 @@ index 0000000..1ce551a
 +    'configure',
 +    configure_options: [
 +        '--prefix=@PREFIX@',
++        '--bindir=@BINDIR@',
 +        '--libdir=@LIBDIR@',
 +        '--incdir=@INCLUDEDIR@',
 +        '--opt-level=' + opt_level,
@@ -610,7 +614,7 @@ index 0000000..dd5db87
 2.47.2
 
 
-From c5207e3d3e35881bfc7c82f2ccdbf96c23604ef8 Mon Sep 17 00:00:00 2001
+From cc6b8f8fd26f2154d9a034fbc284670ddf6b9b35 Mon Sep 17 00:00:00 2001
 From: novenary <novenary@kwak.zip>
 Date: Tue, 5 Dec 2023 20:33:04 +0200
 Subject: [PATCH 6/7] Make console_font_8x16 weak
@@ -633,7 +637,7 @@ index 21ef8da..40c4740 100644
 2.47.2
 
 
-From f244e6d30bd19a152911ddb7f42d54608c2ef50c Mon Sep 17 00:00:00 2001
+From e66af5e4c69516c363fa185c4a6367b90e603985 Mon Sep 17 00:00:00 2001
 From: novenary <novenary@kwak.zip>
 Date: Tue, 5 Dec 2023 22:07:32 +0200
 Subject: [PATCH 7/7] Make builds deterministic

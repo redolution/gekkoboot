@@ -304,6 +304,47 @@ delay_exit() {
 	}
 }
 
+void
+__SYS_PreInit(void) {
+	u32 start = 0x8000'0000, end = 0x8000'3100;
+	DCZeroRange((void *) start, end - start);
+
+	// Detect MRAM configuration set by BS1
+	switch (((vu16 *) 0xCC00'4000)[20] & 7) {
+	case 0:
+		*(u32 *) 0x8000'0028 = 0x100'0000;
+		break;
+	case 1:
+	case 4:
+		*(u32 *) 0x8000'0028 = 0x200'0000;
+		break;
+	case 2:
+	case 6:
+		*(u32 *) 0x8000'0028 = 0x180'0000;
+		break;
+	case 3:
+	case 7:
+		*(u32 *) 0x8000'0028 = 0x300'0000;
+		break;
+	case 5:
+		*(u32 *) 0x8000'0028 = 0x400'0000;
+		break;
+	}
+
+	// Fill console type and device code
+	if (((vu32 *) 0xCC00'6000)[9] == 0xFF) {
+		*(u32 *) 0x8000'002C = SYS_CONSOLE_RETAIL_HW1;
+	} else {
+		*(u32 *) 0x8000'002C = SYS_CONSOLE_DEVELOPMENT_HW1;
+	}
+	*(u32 *) 0x8000'002C += ((vu32 *) 0xCC00'3000)[11] >> 28;
+
+	*(u32 *) 0x8000'00F8 = TB_BUS_CLOCK;
+	*(u32 *) 0x8000'00FC = TB_CORE_CLOCK;
+
+	*(u64 *) 0x8000'30D8 = -__builtin_ppc_get_timebase();
+}
+
 int
 main() {
 	// GCVideo takes a while to boot up.

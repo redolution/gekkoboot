@@ -15,20 +15,24 @@ with open(updater, "rb") as f:
     out = bytearray(f.read())
 
 if bios.endswith(".gcb"):
-    if len(img) > 128 * 1024:
-        raise "Qoob Pro BIOS image too big to fit in flasher"
+    typename = "Pro"
+    max_size = 128 * 1024
 
     msg = b"gekkoboot for QOOB Pro\0"
     msg_offset = 0x1A68
     img_offset = 0x1AE0
 
 if bios.endswith(".qbsx"):
-    if len(img) > 62800:
-        raise "Qoob SX BIOS image too big to fit in flasher"
+    typename = "SX"
+    max_size = 62800
 
     msg = b"gekkoboot for QOOB SX\0"
     msg_offset = 7240
     img_offset = 7404
+
+print(f"Qoob {typename} image size: {len(img)}/{max_size}")
+if len(img) > max_size:
+    raise f"Qoob {typename} BIOS image too big to fit in flasher"
 
 out[msg_offset:msg_offset + len(msg)] = msg
 out[img_offset:img_offset + len(img)] = img

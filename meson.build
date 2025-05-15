@@ -165,7 +165,27 @@ pico = custom_target(
     'pico',
     input: gekkoboot_dol,
     output: 'gekkoboot_pico.uf2',
-    command: [dol2ipl, '@OUTPUT@', '@INPUT@'],
+    command: [dol2ipl, '@OUTPUT@', '@INPUT@', 'rp2040'],
+    build_by_default: true,
+    install: false,
+    install_dir: '/',
+)
+
+pico2 = custom_target(
+    'pico2',
+    input: gekkoboot_dol,
+    output: 'gekkoboot_pico2.uf2',
+    command: [dol2ipl, '@OUTPUT@', '@INPUT@', 'rp2350'],
+    build_by_default: true,
+    install: false,
+    install_dir: '/',
+)
+
+pico_universal = custom_target(
+    'pico_universal',
+    input: [pico, pico2],
+    output: 'gekkoboot_universal.uf2',
+    command: ['sh', '-c', 'cat "$1" "$2" > "$3"', 'sh', '@INPUT0@', '@INPUT1@', '@OUTPUT@'],
     build_by_default: true,
     install: true,
     install_dir: '/',

@@ -206,8 +206,11 @@ $ meson compile -C build
 # The binaries will be in the build directory
 $ ls build
 ...
+gekkoboot.dol
 gekkoboot_memcard.gci
 gekkoboot_pico.uf2
+gekkoboot_pico2.uf2
+gekkoboot_universal.uf2
 gekkoboot_qoob_pro.gcb
 gekkoboot_viper.vgc
 qoob_pro_gekkoboot_upgrade.elf

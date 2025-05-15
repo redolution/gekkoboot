@@ -78,7 +78,7 @@ gekkoboot is bundled with the [PicoBoot] firmware.
 Just follow the [update guide][pb-update].
 
 You can also update gekkoboot separately from the PicoBoot firmware,
-using the supplied `gekkoboot_pico.uf2`, and following the same procedure
+using the supplied `gekkoboot_universal.uf2`, and following the same procedure
 (requires PicoBoot 0.4 or later).
 
 [PicoBoot]: https://github.com/webhdx/PicoBoot
@@ -206,8 +206,11 @@ $ meson compile -C build
 # The binaries will be in the build directory
 $ ls build
 ...
+gekkoboot.dol
 gekkoboot_memcard.gci
 gekkoboot_pico.uf2
+gekkoboot_pico2.uf2
+gekkoboot_universal.uf2
 gekkoboot_qoob_pro.gcb
 gekkoboot_viper.vgc
 qoob_pro_gekkoboot_upgrade.elf

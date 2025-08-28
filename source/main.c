@@ -21,6 +21,7 @@ int dol_argc = 0;
 #define MAX_NUM_ARGV 1024
 char *dol_argv[MAX_NUM_ARGV];
 u16 all_buttons_held;
+int check_mode = 0;
 
 char *default_path = "/ipl.dol";
 struct shortcut {
@@ -401,6 +402,11 @@ main() {
 		return 0;
 	}
 
+	if (all_buttons_held & PAD_BUTTON_DOWN) {
+		check_mode = 1;
+		kprintf("Check mode enabled.\n");
+	}
+
 	char *paths[2];
 	int num_paths = 0;
 
@@ -435,10 +441,15 @@ main() {
 
 load:
 	if (!dol) {
-		kprintf("No DOL found! Halting.");
-		while (true) {
-			VIDEO_WaitVSync();
+		if (check_mode) {
+			kprintf("No DOL found! Halting.");
+			while (true) {
+				VIDEO_WaitVSync();
+			}
 		}
+		kprintf("No DOL found! Rebooting into original IPL...\n");
+		delay_exit();
+		return 0;
 	}
 
 	struct __argv dolargs;
